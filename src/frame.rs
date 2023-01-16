@@ -209,6 +209,9 @@ impl fmt::Display for Frame {
 }
 
 fn peek_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
+    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
+    // no en el fichero con la implementacion de Cursor.
     if !src.has_remaining() {
         return Err(Error::Incomplete);
     }
@@ -217,6 +220,9 @@ fn peek_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
 }
 
 fn get_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
+    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
+    // no en el fichero con la implementacion de Cursor.
     if !src.has_remaining() {
         return Err(Error::Incomplete);
     }
@@ -225,6 +231,9 @@ fn get_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
 }
 
 fn skip(src: &mut Cursor<&[u8]>, n: usize) -> Result<(), Error> {
+    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
+    // no en el fichero con la implementacion de Cursor.
     if src.remaining() < n {
         return Err(Error::Incomplete);
     }
