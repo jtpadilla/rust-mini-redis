@@ -1,6 +1,6 @@
 [package]
 authors = ["Carl Lerche <me@carllerche.com>"]
-edition = "2018"
+edition = "2021"
 name = "mini-redis"
 version = "0.4.1"
 license = "MIT"
@@ -19,6 +19,10 @@ path = "src/bin/cli.rs"
 [[bin]]
 name = "mini-redis-server"
 path = "src/bin/server.rs"
+
+[[bin]]
+name = "prueba"
+path = "src/bin/prueba.rs"
 
 [dependencies]
 async-stream = "0.3.0"
