@@ -112,7 +112,7 @@ impl Frame {
 
     /// Ojo! No es un metodo.
     /// Es una funcion asociada a la estructura sin estado (en java seria un metodo estatico)
-    /// Este metodo deberia de haberse llamado despues de llamar e `check`.
+    /// Este metodo deberia de haberse llamado despues de llamar a `check`.
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Frame, Error> {
         match get_u8(src)? {
             b'+' => {
@@ -126,55 +126,77 @@ impl Frame {
                 Ok(Frame::Simple(string))
             }
             b'-' => {
-                // Read the line and convert it to `Vec<u8>`
+                // Se leen un &[u8] desde la linea y despues se convierte a un 'Vec<u8>'
                 let line = get_line(src)?.to_vec();
 
-                // Convert the line to a String
+                // El `Vec<u8> se convert convierten en un String
                 let string = String::from_utf8(line)?;
 
                 Ok(Frame::Error(string))
             }
             b':' => {
+                // Se lee un entero sin signo de 64 bits
                 let len = get_decimal(src)?;
                 Ok(Frame::Integer(len))
             }
             b'$' => {
                 if b'-' == peek_u8(src)? {
+                    // El prefijo '-' indica que sera un "null"
                     let line = get_line(src)?;
 
                     if line != b"-1" {
+                        // Si finalmente no es "null" sera un error de trama
                         return Err("protocol error; invalid frame format".into());
                     }
 
                     Ok(Frame::Null)
                 } else {
-                    // Read the bulk string
+                    // Se lee un "bulk string"
+
+                    // Se lee el campo con la longitud...
                     let len = get_decimal(src)?.try_into()?;
+                    // ...y se anyade el delimitador "\r\n"
                     let n = len + 2;
 
+                    // Nos aseguramos que al menos estan los bytes esperados..
                     if src.remaining() < n {
                         return Err(Error::Incomplete);
                     }
-
+                    // ..desde la posicion actual se utilizan "len" bytes utilizando `chunk`
+                    // y se genera una instancia de Bytes.
                     let data = Bytes::copy_from_slice(&src.chunk()[..len]);
 
-                    // skip that number of bytes + 2 (\r\n).
+                    // Se avanza la posicion actual "bytes + 2 (\r\n)" posiciones.
                     skip(src, n)?;
 
+                    // Se retorna la variante de Frame que corresponde.
                     Ok(Frame::Bulk(data))
                 }
             }
             b'*' => {
+                // Se lee la longitud del array
                 let len = get_decimal(src)?.try_into()?;
+
+                // Se crea un vector para diche longitud
                 let mut out = Vec::with_capacity(len);
 
+                // Mediante llamadas recursivas se parsea cada una de las entradas del array
+                // y se carga el vector
                 for _ in 0..len {
                     out.push(Frame::parse(src)?);
                 }
 
+                // Se retorna la variante del Frame que corresponde.
                 Ok(Frame::Array(out))
             }
-            _ => unimplemented!(),
+            _ => {
+                // El tipo de frame no esta soportado y el ejemplo utiliza 
+                // el macro `std::unimplemented` para generar un "panic" tipo de rust.
+                // En realidad creo que no es correcto porque un problema de trama en una
+                // conexion TCP desencadena la salida del programa.
+                // Deberia simplemente afectar a la conexion en curso...
+                unimplemented!()
+            },
         }
     }
 
