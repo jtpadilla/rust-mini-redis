@@ -29,7 +29,11 @@ pub enum Error {
 }
 
 impl Frame {
-    /// Retorna una array vacio
+    /// Retorna `Frame` con la variante `Array` con un `vector<Frame>` vacio.
+    /// La unica forma de crear un 'Frame' es creando una variante de tipo 'Array`
+    /// la cual contiene un 'Vector<Frame>` vacio. El resto de metodos nos
+    /// permitiran incorporar al vector nuevas instancios de 'Frame::Bulk' 
+    /// y 'Frame::Integer(bytes: Bytes)'.
     pub(crate) fn array() -> Frame {
         Frame::Array(vec![])
     }
