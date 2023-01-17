@@ -3,12 +3,15 @@ use crate::Frame;
 use bytes::Bytes;
 use std::{fmt, str, vec};
 
-/// Utility for parsing a command
-///
-/// Commands are represented as array frames. Each entry in the frame is a
-/// "token". A `Parse` is initialized with the array frame and provides a
-/// cursor-like API. Each command struct includes a `parse_frame` method that
-/// uses a `Parse` to extract its fields.
+/// Utilidad para parsear un comando.
+/// 
+/// Los comandos son representados por un array de Frames donde cada 
+/// entrada en el array es un "token". Una instancia de `Parse` es 
+/// inicializada con un array de frames y proporciona una API del estilo 
+/// de un cursor.
+/// 
+/// Cada instancia de un comando tiene un metodo `parse_frame`que utiliza
+/// `Parse` para extraer sus campos.
 #[derive(Debug)]
 pub(crate) struct Parse {
     /// Array frame iterator.

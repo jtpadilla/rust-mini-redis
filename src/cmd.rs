@@ -18,9 +18,7 @@ pub use unknown::Unknown;
 
 use crate::{Connection, Db, Frame, Parse, ParseError, Shutdown};
 
-/// Enumeration of supported Redis commands.
-///
-/// Methods called on `Command` are delegated to the command implementation.
+/// Enumeracion de los comandos REDIS soportados.
 #[derive(Debug)]
 pub enum Command {
     Get(Get),
@@ -33,14 +31,12 @@ pub enum Command {
 }
 
 impl Command {
-    /// Parse a command from a received frame.
+    /// Parsea el comando desde el Frame recibido.
+    /// El frame debe ser una variante 'Frame::Array'
     ///
-    /// The `Frame` must represent a Redis command supported by `mini-redis` and
-    /// be the array variant.
-    ///
-    /// # Returns
-    ///
-    /// On success, the command value is returned, otherwise, `Err` is returned.
+    /// # Retorno
+    /// En caso de exito una variante del comando es retornada, 
+    /// en caso contrario se retornara `crate::Error'.
     pub fn from_frame(frame: Frame) -> crate::Result<Command> {
         // The frame  value is decorated with `Parse`. `Parse` provides a
         // "cursor" like API which makes parsing the command easier.
