@@ -52,25 +52,23 @@ pub use buffer::{buffer, Buffer};
 mod shutdown;
 use shutdown::Shutdown;
 
-/// Default port that a redis server listens on.
-///
-/// Used if no port is specified.
+/// Puerto por defecto que se utilizara si no se especifica otro
 pub const DEFAULT_PORT: u16 = 6379;
 
-/// Error returned by most functions.
-///
-/// When writing a real application, one might want to consider a specialized
-/// error handling crate or defining an error type as an `enum` of causes.
-/// However, for our example, using a boxed `std::error::Error` is sufficient.
-///
-/// For performance reasons, boxing is avoided in any hot path. For example, in
-/// `parse`, a custom error `enum` is defined. This is because the error is hit
-/// and handled during normal execution when a partial frame is received on a
-/// socket. `std::error::Error` is implemented for `parse::Error` which allows
-/// it to be converted to `Box<dyn std::error::Error>`.
+/// Error retornado pro la mayoria de funciones.
+/// 
+/// En una aplicacion real se puede considerar especializar la
+/// gestion de errores del crate por ejemplo definiendo el error
+/// como una enumeracion de causas.
+/// 
+/// Pero para este ejemplo se utilizara un boxed `std::error::Error`.
+/// 
+/// Por motivos de rendimiento, se evitara el boxing en cualquier 
+/// "hot path" o llamadas a metodos muy frecuentes utilizando en este
+/// casi un error definido mediante 'enum'. Se utilizara el error 
+/// definido como una 'enum' pero de implementara `std::error:Error` lo
+/// cual permitira retornarlo para convertirlo en un `Box<dyn std::error::Error>`
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
-/// A specialized `Result` type for mini-redis operations.
-///
-/// This is defined as a convenience.
+// Un `Result`especializado para las operaciones del crate.
 pub type Result<T> = std::result::Result<T, Error>;

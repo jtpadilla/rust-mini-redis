@@ -209,40 +209,46 @@ impl fmt::Display for Frame {
 }
 
 fn peek_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
-    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Cursor implementa bytes::buf::Buf como "Implementations on Foreign Types"
     // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
     // no en el fichero con la implementacion de Cursor.
     if !src.has_remaining() {
+        // Si no hay mas bytes para consumir se retorna un error.
         return Err(Error::Incomplete);
     }
-
+    // Inicialmente se obtiene un slice de los bytes entra la actual posicion y el final 
+    // del buffer.
+    // Finalmente se retorna el byte que hay en la posicion 0 del slice
+    // La posicion NO AVANZA!
     Ok(src.chunk()[0])
 }
 
 fn get_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {
-    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Cursor implementa bytes::buf::Buf como "Implementations on Foreign Types"
     // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
     // no en el fichero con la implementacion de Cursor.
     if !src.has_remaining() {
+        // Si no hay mas bytes para consumir se retorna un error.
         return Err(Error::Incomplete);
     }
-
+    // Retorna el lsiguiente bytes y avanza una posicion
     Ok(src.get_u8())
 }
 
 fn skip(src: &mut Cursor<&[u8]>, n: usize) -> Result<(), Error> {
-    // Cursor implementa byrtes::buf::Buf como "Implementations on Foreign Types"
+    // Cursor implementa bytes::buf::Buf como "Implementations on Foreign Types"
     // Es decir, la implementacion esta en el fichero con el codigo del Trait Buf
     // no en el fichero con la implementacion de Cursor.
     if src.remaining() < n {
         return Err(Error::Incomplete);
+        // Si no estan el numero de bytes indicados para consumir se retorna un error.
     }
-
+    // Se avanza las posiciones indicadas
     src.advance(n);
     Ok(())
 }
 
-/// Read a new-line terminated decimal
+/// Lee un entero (sin signo) que este codificado en texto en la siguiente linea.
 fn get_decimal(src: &mut Cursor<&[u8]>) -> Result<u64, Error> {
     use atoi::atoi;
 
@@ -251,19 +257,21 @@ fn get_decimal(src: &mut Cursor<&[u8]>) -> Result<u64, Error> {
     atoi::<u64>(line).ok_or_else(|| "protocol error; invalid frame format".into())
 }
 
-/// Find a line
+/// Intenta obtener una linea
 fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
-    // Scan the bytes directly
+    // Obtiene la posicion actual
     let start = src.position() as usize;
+    // Se obtiene el slice subyacente
+    let inner = src.get_ref();
     // Scan to the second to last byte
-    let end = src.get_ref().len() - 1;
+    let end = inner.len() - 1;
 
     for i in start..end {
-        if src.get_ref()[i] == b'\r' && src.get_ref()[i + 1] == b'\n' {
-            // We found a line, update the position to be *after* the \n
+        if inner[i] == b'\r' && inner[i + 1] == b'\n' {
+            // Hemos encontrado una linea, se actualiza la posicion despues de \n
             src.set_position((i + 2) as u64);
-
-            // Return the line
+            
+            // Se retorna la linea
             return Ok(&src.get_ref()[start..i]);
         }
     }
@@ -271,32 +279,47 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], Error> {
     Err(Error::Incomplete)
 }
 
+// Se implementa core::convert::From 
+// para conversion String -> mini_redis::frame::Error
 impl From<String> for Error {
     fn from(src: String) -> Error {
         Error::Other(src.into())
     }
 }
 
+// Utiliza la implementacion automatica de core::convert::Into 
+// al implementar core::convert::From 
+// para conversion String -> mini_redis::frame::Error
 impl From<&str> for Error {
     fn from(src: &str) -> Error {
         src.to_string().into()
     }
 }
 
+// Utiliza la implementacion automatica de core::convert::Into 
+// al implementar core::convert::From 
+// para conversion String -> mini_redis::frame::Error
 impl From<FromUtf8Error> for Error {
     fn from(_src: FromUtf8Error) -> Error {
         "protocol error; invalid frame format".into()
     }
 }
 
+// Utiliza la implementacion automatica de core::convert::Into 
+// al implementar core::convert::From 
+// para conversion String -> mini_redis::frame::Error
 impl From<TryFromIntError> for Error {
     fn from(_src: TryFromIntError) -> Error {
         "protocol error; invalid frame format".into()
     }
 }
 
+// Implementa `std::error::Error` en `mini_redis::frame::Error'
+// para poder retornar el error estipulado de forma general
+// para el crate.
 impl std::error::Error for Error {}
 
+// Se implementa `fmt::Display`para poder visualizar el error.
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
