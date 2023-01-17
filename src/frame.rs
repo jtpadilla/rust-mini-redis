@@ -81,26 +81,31 @@ impl Frame {
             }
             b'$' => {
                 if b'-' == peek_u8(src)? {
-                    // Skip '-1\r\n'
+                    // Saltamos -> '-1\r\n'
                     skip(src, 4)
                 } else {
-                    // Read the bulk string
+                    // Leemos la longitud del "bulk string"
                     let len: usize = get_decimal(src)?.try_into()?;
 
-                    // skip that number of bytes + 2 (\r\n).
+                    // saltamos la longitud del "bulk string" + 2 (\r\n).
                     skip(src, len + 2)
                 }
             }
             b'*' => {
+                // Leemos la longitud del array
                 let len = get_decimal(src)?;
 
+                // Mediante recursividad verificamos cada uno de los elementos del array
                 for _ in 0..len {
                     Frame::check(src)?;
                 }
 
                 Ok(())
             }
-            actual => Err(format!("protocol error; invalid frame type byte `{}`", actual).into()),
+            actual => {
+                // Tipo de frame no soportado
+                Err(format!("protocol error; invalid frame type byte `{}`", actual).into())
+            }, 
         }
     }
 
