@@ -116,10 +116,11 @@ impl Frame {
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Frame, Error> {
         match get_u8(src)? {
             b'+' => {
-                // Read the line and convert it to `Vec<u8>`
+                // Se lee la linea que se obtiene como un '&[u8]'.
+                // Pero se convierte el slice en un 'Vec<u8>'.
                 let line = get_line(src)?.to_vec();
 
-                // Convert the line to a String
+                // Se convierte el 'Vec<u8>' en un String
                 let string = String::from_utf8(line)?;
 
                 Ok(Frame::Simple(string))
