@@ -64,7 +64,8 @@ impl Frame {
         }
     }
 
-    /// Verifica si el mensaje puede ser decodificado
+    /// Ojo! No es un metodo.
+    /// Es una funcion asociada a la estructura sin estado (en java seria un metodo estatico)
     pub fn check(src: &mut Cursor<&[u8]>) -> Result<(), Error> {
         match get_u8(src)? {
             b'+' => {
@@ -109,7 +110,9 @@ impl Frame {
         }
     }
 
-    /// The message has already been validated with `check`.
+    /// Ojo! No es un metodo.
+    /// Es una funcion asociada a la estructura sin estado (en java seria un metodo estatico)
+    /// Este metodo deberia de haberse llamado despues de llamar e `check`.
     pub fn parse(src: &mut Cursor<&[u8]>) -> Result<Frame, Error> {
         match get_u8(src)? {
             b'+' => {
