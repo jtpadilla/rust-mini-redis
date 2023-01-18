@@ -1,8 +1,8 @@
 use std::convert::From;
 
 #[derive(Debug)]
-struct Number {
-    value: i32,
+pub struct Number {
+    pub value: i32,
 }
 
 impl From<i32> for Number {
