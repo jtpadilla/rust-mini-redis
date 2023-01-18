@@ -107,14 +107,17 @@ impl Parse {
 
             },
             frame => {
-                // Se genera un error desde un String (gracias al trait From<String>)
-                Err(
-                    format!(
-                        "protocol error; expected simple frame or bulk frame, got {:?}", 
-                        frame
-                    )
-                    .into()
-                )
+                // Commo tenemos la impleentacion del trait `From<String> for ParseError`
+                // automaticamente podemos invocar `stringInstance.into()` si gracias a 
+                // la inferencia de tipos sabemos que el destinatario es un `ParseError`.
+                // Como resultado 'StringInstance.into()' se convertira en 
+                // 'ParseError::from(stringInstance)'.
+                let string = format!(
+                    "protocol error; expected simple frame or bulk frame, got {:?}", 
+                    frame
+                );
+                let err = string.into();
+                Err(err)
             },
         }
     }
