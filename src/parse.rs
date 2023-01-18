@@ -10,7 +10,7 @@ use std::{fmt, str, vec};
 /// inicializada con un array de frames y proporciona una API del estilo 
 /// de un cursor.
 /// 
-/// Cada instancia de un comando tiene un metodo `parse_frame`que utiliza
+/// Cada instancia de un comando tiene un metodo `parse_frame` que utiliza
 /// `Parse` para extraer sus campos.
 #[derive(Debug)]
 pub(crate) struct Parse {
@@ -78,18 +78,10 @@ impl Parse {
             Frame::Bulk(data) => {
                 // `Frame::Bulk` contiene un `bytes::Bytes` con el que se realizan 
                 // las siguientes tranformaciones:
-                //   1 - `&data[..]` genera un `&[u8]` (slice de bytes)
-                //   2 - `std::str::from_utf8()` genera un `&str`
-                //   3 - '.map(|s| s.to_string())` gebera un String
-                //   4 - `.map_err(|_| "...")` en caso de error previo se genera nuestro error..
-                //
-                // Este codigo forma parte de un match que da como resultado una expresion
-                // que es a su vez el retorno de la funcion `next_string()` la cual
-                // tiene declarado un retorno `Result<String, ParseError>`.
-                // La llamada `.map_err(|_| "...")` del Result retorna una String pero 
-                // el compilador sabe 
+                //   - `&data[..]` genera un `&[u8]` (slice de bytes)
+                //   - `std::str::from_utf8()` genera un `&str`
                 str::from_utf8(&data[..])
-                    // Este `.map()' reotrnara un 'Result<String, _>' que es lo que
+                    // Este `.map()' retOrnara un 'Result<String, _>' que es lo que
                     // se espera en caso de que todo haya indo bien.
                     .map(|s| s.to_string())
                     // Sin embargo, si se ha producido un error entrara el 
