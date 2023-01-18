@@ -82,12 +82,32 @@ impl Parse {
                 //   2 - `std::str::from_utf8()` genera un `&str`
                 //   3 - '.map(|s| s.to_string())` gebera un String
                 //   4 - `.map_err(|_| "...")` en caso de error previo se genera nuestro error..
+                //
+                // Este codigo forma parte de un match que da como resultado una expresion
+                // que es a su vez el retorno de la funcion `next_string()` la cual
+                // tiene declarado un retorno `Result<String, ParseError>`.
+                // La llamada `.map_err(|_| "...")` del Result retorna una String pero 
+                // el compilador sabe 
                 str::from_utf8(&data[..])
+                    // Este `.map()' reotrnara un 'Result<String, _>' que es lo que
+                    // se espera en caso de que todo haya indo bien.
                     .map(|s| s.to_string())
+                    // Sin embargo, si se ha producido un error entrara el 
+                    // `.map_err(...)` el cual da como resultado un 'Result<_,  String>'.
                     .map_err(|_| "protocol error; invalid string".into())
+                    // Pero expresion resultante que es el resultado del `match` y 
+                    // que a su vez se convierte en el resultado de la funcion 
+                    // `fn next_string()`.
+                    // El resultado es un `Result<String, String>` pero el resultado
+                    // que se espera es un `Result<String, ParseError>`.
+                    // Esto esta resuelto ya que el compilador encontrara mas abajo 
+                    // que `ParseError` implementa el trait `impl From<String> for ParseError`
+                    // y mediante esta conversion el compilador hara la adaptacion 
+                    // correspondiente.
+
             },
             frame => {
-                // Se genera un error desde un String (gracias al trati From<String>)
+                // Se genera un error desde un String (gracias al trait From<String>)
                 Err(
                     format!(
                         "protocol error; expected simple frame or bulk frame, got {:?}", 
