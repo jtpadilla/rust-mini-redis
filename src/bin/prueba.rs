@@ -1,51 +1,24 @@
-use std::fmt;
-use std::num::TryFromIntError;
-use std::string::FromUtf8Error;
-
-#[derive(Debug)]
-pub enum Error {
-    /// No hay suficientes datos para parsear un mensaje
-    Incomplete,
-
-    /// Codificacion invalida del mensaje
-    Other(mini_redis::Error),
-}
-
-impl From<String> for Error {
-    fn from(src: String) -> Error {
-        Error::Other(src.into())
-    }
-}
-
-impl From<&str> for Error {
-    fn from(src: &str) -> Error {
-        src.to_string().into()
-    }
-}
-
-impl From<FromUtf8Error> for Error {
-    fn from(_src: FromUtf8Error) -> Error {
-        "protocol error; invalid frame format".into()
-    }
-}
-
-impl From<TryFromIntError> for Error {
-    fn from(_src: TryFromIntError) -> Error {
-        "protocol error; invalid frame format".into()
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Error::Incomplete => "stream ended early".fmt(fmt),
-            Error::Other(err) => err.fmt(fmt),
-        }
-    }
-}
-
-
 fn main() {
+
+    // Se crea un vector de caracteres y se carga
+    let vec = vec!['a', 'b', 'c'];
+
+    // Se creo un iterador para extraer cada una de las entradas del vector
+    let mut into_iter = vec.into_iter();
+
+    // La estructura 'IntoIter' implementa el metodo `as_slice` que retorna un Slice 
+    // con las entradas pendientes de consumir.
+    //
+    // Se verifica las entradas que quedan por consumir.
+    assert_eq!(into_iter.as_slice(), &['a', 'b', 'c']);
+
+    // La estructura 'IntoIter' entre otro traits implementa `Iterator` donde 
+    // entre otros metodos tenemos `next`.
+    let _ = into_iter.next().unwrap();
+
+    // Se verifica que se ha consumido el primer mensaje
+    assert_eq!(into_iter.as_slice(), &['b', 'c']);
+
+    println!("Todo Ok!");
+
 }

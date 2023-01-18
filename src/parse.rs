@@ -14,64 +14,88 @@ use std::{fmt, str, vec};
 /// `Parse` para extraer sus campos.
 #[derive(Debug)]
 pub(crate) struct Parse {
-    /// Array frame iterator.
+    /// Iterador para al recorrer un Frame::Array.
     parts: vec::IntoIter<Frame>,
 }
 
-/// Error encountered while parsing a frame.
+/// Error encontrado mientras se parsea un frame.
 ///
-/// Only `EndOfStream` errors are handled at runtime. All other errors result in
-/// the connection being terminated.
+/// Unicamente en error `EndOfStream` es gestionado en runtime. Todos los
+/// otros errores terminan con el cierre de la conexion.
 #[derive(Debug)]
 pub(crate) enum ParseError {
-    /// Attempting to extract a value failed due to the frame being fully
-    /// consumed.
+    /// El intentoi de extraer un frame a fallado porque se han consumido todos los frames.
     EndOfStream,
 
-    /// All other errors
+    /// Todos los otros errores
     Other(crate::Error),
 }
 
 impl Parse {
-    /// Create a new `Parse` to parse the contents of `frame`.
-    ///
-    /// Returns `Err` if `frame` is not an array frame.
+    /// Crea un nuevo `Parse` para parsear el contenido de un `frame`.
+    /// 
+    /// Retorna un `Err` si el frame no es un 'Frame::Array'.
     pub(crate) fn new(frame: Frame) -> Result<Parse, ParseError> {
         let array = match frame {
-            Frame::Array(array) => array,
-            frame => return Err(format!("protocol error; expected array, got {:?}", frame).into()),
+            Frame::Array(array) => {
+                // El parametro es un `Frame::Array`, todo Ok.
+                array
+            },
+            frame => {
+                // No es un `Frame::Array`, no se puede continuar!
+                return Err(format!("protocol error; expected array, got {:?}", frame).into());
+            },
         };
 
-        Ok(Parse {
-            parts: array.into_iter(),
-        })
+        // La expresion da como resultado una instanca de `Parse` que contiene el 
+        // iterador al array de `Frame`.
+        Ok(
+            Parse {
+                parts: array.into_iter(),
+            }
+        )
     }
 
-    /// Return the next entry. Array frames are arrays of frames, so the next
-    /// entry is a frame.
+    /// Retorna la siguiente entrada del iterador o un error si no quedan mas.
+    /// 
+    /// Este metodo es privado porque sera utilizado por los metodos especificos 
+    /// que seran invocados para obtener los distintos tipos de frames.
     fn next(&mut self) -> Result<Frame, ParseError> {
         self.parts.next().ok_or(ParseError::EndOfStream)
     }
 
-    /// Return the next entry as a string.
-    ///
-    /// If the next entry cannot be represented as a String, then an error is returned.
+    /// Retorna la siguiente entrada como una string
+    /// 
+    /// Si la siguiente entrada no puede ser representada como una string entonces
+    /// un error sera retornado.
     pub(crate) fn next_string(&mut self) -> Result<String, ParseError> {
         match self.next()? {
-            // Both `Simple` and `Bulk` representation may be strings. Strings
-            // are parsed to UTF-8.
-            //
-            // While errors are stored as strings, they are considered separate
-            // types.
-            Frame::Simple(s) => Ok(s),
-            Frame::Bulk(data) => str::from_utf8(&data[..])
-                .map(|s| s.to_string())
-                .map_err(|_| "protocol error; invalid string".into()),
-            frame => Err(format!(
-                "protocol error; expected simple frame or bulk frame, got {:?}",
-                frame
-            )
-            .into()),
+            // Ambos `Simple` and `Bulk` pueden ser representados por una String.
+            Frame::Simple(s) => {
+                // La string de `Frame::Simple` se puede utilizar directamente.
+                Ok(s)
+            },
+            Frame::Bulk(data) => {
+                // `Frame::Bulk` contiene un `bytes::Bytes` con el que se realizan 
+                // las siguientes tranformaciones:
+                //   1 - `&data[..]` genera un `&[u8]` (slice de bytes)
+                //   2 - `std::str::from_utf8()` genera un `&str`
+                //   3 - '.map(|s| s.to_string())` gebera un String
+                //   4 - `.map_err(|_| "...")` en caso de error previo se genera nuestro error..
+                str::from_utf8(&data[..])
+                    .map(|s| s.to_string())
+                    .map_err(|_| "protocol error; invalid string".into())
+            },
+            frame => {
+                // Se genera un error desde un String (gracias al trati From<String>)
+                Err(
+                    format!(
+                        "protocol error; expected simple frame or bulk frame, got {:?}", 
+                        frame
+                    )
+                    .into()
+                )
+            },
         }
     }
 

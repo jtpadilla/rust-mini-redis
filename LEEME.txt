@@ -1,0 +1,6 @@
+El estudio de este codigo se tiene que hacer en este orden:
+
+1 - Db (db.rs)
+2 - Frame (frame.rs)
+3 - Parse (parse.rs)
+4 - 
