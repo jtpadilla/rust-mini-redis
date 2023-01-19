@@ -32,26 +32,26 @@ pub enum Command {
 
 impl Command {
     /// Parsea el comando desde el Frame recibido.
-    /// El frame debe ser una variante 'Frame::Array'
+    /// El frame que se proporciona como parametro 
+    /// debe ser una variante 'Frame::Array'
     ///
     /// # Retorno
     /// En caso de exito una variante del comando es retornada, 
     /// en caso contrario se retornara `crate::Error'.
     pub fn from_frame(frame: Frame) -> crate::Result<Command> {
-        // The frame  value is decorated with `Parse`. `Parse` provides a
-        // "cursor" like API which makes parsing the command easier.
-        //
-        // The frame value must be an array variant. Any other frame variants
-        // result in an error being returned.
+        // El valor es decorado con un `Parse`. Parse proporciona 
+        // una API tipo "cursor" que permite parsear los comandos mas facilmente.
         let mut parse = Parse::new(frame)?;
 
-        // All redis commands begin with the command name as a string. The name
-        // is read and converted to lower cases in order to do case sensitive
-        // matching.
+        // Una vez tenemos todos los frames del array accesibles a traves del
+        // parseador, obtenemos el primer frame que debe ser una String
+        // que contiene el nombre del comando.
+        // Este nombre del comando se pasa a minusculas para buscar 
+        // la coinicidencia con el comando.
         let command_name = parse.next_string()?.to_lowercase();
 
-        // Match the command name, delegating the rest of the parsing to the
-        // specific command.
+        // Una vez identificado el comando se deriva a cada comando el 
+        // procesado del resto de parametros.
         let command = match &command_name[..] {
             "get" => Command::Get(Get::parse_frames(&mut parse)?),
             "publish" => Command::Publish(Publish::parse_frames(&mut parse)?),
