@@ -41,54 +41,42 @@ impl Subscribe {
         }
     }
 
-    /// Parse a `Subscribe` instance from a received frame.
-    ///
-    /// The `Parse` argument provides a cursor-like API to read fields from the
-    /// `Frame`. At this point, the entire frame has already been received from
-    /// the socket.
-    ///
-    /// The `SUBSCRIBE` string has already been consumed.
-    ///
-    /// # Returns
-    ///
-    /// On success, the `Subscribe` value is returned. If the frame is
-    /// malformed, `Err` is returned.
-    ///
-    /// # Format
-    ///
-    /// Expects an array frame containing two or more entries.
-    ///
-    /// ```text
+    /// 
+    /// Parsea una instancia de `Set` desde el frame que se ha recibido.
+    /// 
+    /// Como parametro para el parseado se recibe una instancia de 
+    /// `Parse` con todos los argumentos que se han recibido y 
+    /// que pueden ser consumidos.
+    /// 
+    /// # Formato del comando
     /// SUBSCRIBE channel [channel ...]
-    /// ```
+    /// 
+    /// # Retorno
+    /// Retorna la string `SUBSCRIBE` o Err el el frame esta mal formado.
+    /// 
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Subscribe> {
         use ParseError::EndOfStream;
 
-        // The `SUBSCRIBE` string has already been consumed. At this point,
-        // there is one or more strings remaining in `parse`. These represent
-        // the channels to subscribe to.
+        // La string `SUBSCRIBE` ya ha sido consumido.
         //
-        // Extract the first string. If there is none, the the frame is
-        // malformed and the error is bubbled up.
+        // Primero se extrae el nombre del primer canal.
         let mut channels = vec![parse.next_string()?];
 
-        // Now, the remainder of the frame is consumed. Each value must be a
-        // string or the frame is malformed. Once all values in the frame have
-        // been consumed, the command is fully parsed.
+        // Ahora, el resto de nombres de canal son consumidos.
         loop {
             match parse.next_string() {
-                // A string has been consumed from the `parse`, push it into the
-                // list of channels to subscribe to.
+                // Un nuevo nombre de canal, se incorpora a la lista de canales.
                 Ok(s) => channels.push(s),
-                // The `EndOfStream` error indicates there is no further data to
-                // parse.
+
+                // El error `EndOfStream` indica que no hay nada mas que parsear.
                 Err(EndOfStream) => break,
-                // All other errors are bubbled up, resulting in the connection
-                // being terminated.
+
+                // Cualquier otro error implica que hay que cerrar la conexion
                 Err(err) => return Err(err.into()),
             }
         }
 
+        // Retornamos la instancia de `Subscribe`.
         Ok(Subscribe { channels })
     }
 
