@@ -7,33 +7,34 @@ use tokio::select;
 use tokio::sync::broadcast;
 use tokio_stream::{Stream, StreamExt, StreamMap};
 
-/// Subscribes the client to one or more channels.
-///
-/// Once the client enters the subscribed state, it is not supposed to issue any
-/// other commands, except for additional SUBSCRIBE, PSUBSCRIBE, UNSUBSCRIBE,
-/// PUNSUBSCRIBE, PING and QUIT commands.
+/// Subscribe el cliente a uno o mas canales.
+/// 
+/// Una vez un client entra en estado subscrito ya no acepta el envio de
+/// ningun otro comando, excepto comandos adicionales SUBSCRIBE, PSUBSCRIBE, 
+/// UNSUBSCRIBE, PUNSUBSCRIBE, PING y QUIT.
 #[derive(Debug)]
 pub struct Subscribe {
     channels: Vec<String>,
 }
 
-/// Unsubscribes the client from one or more channels.
+/// Unsubscribes al client de uno o mas canales.
 ///
-/// When no channels are specified, the client is unsubscribed from all the
-/// previously subscribed channels.
+/// Cuando no se especifivan canales, el cliente elimina la subscripcion
+/// de todos lso canales en los que se subscribio previamente.
 #[derive(Clone, Debug)]
 pub struct Unsubscribe {
     channels: Vec<String>,
 }
 
-/// Stream of messages. The stream receives messages from the
-/// `broadcast::Receiver`. We use `stream!` to create a `Stream` that consumes
-/// messages. Because `stream!` values cannot be named, we box the stream using
-/// a trait object.
+/// Stream de mensajes.
+/// El stream recibe los mensajes desde el `broadcast::Receiver`.
+/// Utilizaremos `stream!` para crear un `Stream` que consume mensajes.
+/// Como a los valores de `stream!` no se les puede asignar un nombre,
+/// se le aplica un Box al stream mediante un "trail object".
 type Messages = Pin<Box<dyn Stream<Item = Bytes> + Send>>;
 
 impl Subscribe {
-    /// Creates a new `Subscribe` command to listen on the specified channels.
+    /// Crea un nuevo comando `Subscribe` para escuchar por los comandos especificados.
     pub(crate) fn new(channels: &[String]) -> Subscribe {
         Subscribe {
             channels: channels.to_vec(),
