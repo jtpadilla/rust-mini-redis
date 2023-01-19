@@ -19,27 +19,21 @@ impl Ping {
         Ping { msg }
     }
 
-    /// Parse a `Ping` instance from a received frame.
-    ///
-    /// The `Parse` argument provides a cursor-like API to read fields from the
-    /// `Frame`. At this point, the entire frame has already been received from
-    /// the socket.
-    ///
-    /// The `PING` string has already been consumed.
-    ///
-    /// # Returns
-    ///
-    /// Returns the `Ping` value on success. If the frame is malformed, `Err` is
-    /// returned.
-    ///
-    /// # Format
-    ///
-    /// Expects an array frame containing `PING` and an optional message.
-    ///
-    /// ```text
+    /// Parsea una instancia de `Ping` desde el frame que se ha recibido.
+    /// 
+    /// Como parametro para el parseado se recibe una instancia de 
+    /// `Parse` con todos los argumentos que se han recibido y 
+    /// que pueden ser consumidos.
+    /// 
+    /// # Formato del comando
     /// PING [message]
-    /// ```
+    /// 
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Ping> {
+        // El primer argumento 'PING' ya ha sido consumido.
+        //
+        // El parseador nos permite acceder a los argumentos pendientes
+        // generando un error en caso de que no existan o de que no 
+        // sean del tipo esperado.
         match parse.next_string() {
             Ok(msg) => Ok(Ping::new(Some(msg))),
             Err(ParseError::EndOfStream) => Ok(Ping::default()),
@@ -47,10 +41,9 @@ impl Ping {
         }
     }
 
-    /// Apply the `Ping` command and return the message.
-    ///
-    /// The response is written to `dst`. This is called by the server in order
-    /// to execute a received command.
+    /// Aplica el comando `Ping` (en este caso no utiliza la basde de datos).
+    /// 
+    /// La respuesta es escrita en ´dst´.
     #[instrument(skip(self, dst))]
     pub(crate) async fn apply(self, dst: &mut Connection) -> crate::Result<()> {
         let response = match self.msg {
@@ -58,16 +51,13 @@ impl Ping {
             Some(msg) => Frame::Bulk(Bytes::from(msg)),
         };
 
-        // Write the response back to the client
+        // Se envia la respuesta al cliente
         dst.write_frame(&response).await?;
 
         Ok(())
     }
 
-    /// Converts the command into an equivalent `Frame`.
-    ///
-    /// This is called by the client when encoding a `Ping` command to send
-    /// to the server.
+    /// Convierte este comando en su representacion en un Frame.
     pub(crate) fn into_frame(self) -> Frame {
         let mut frame = Frame::array();
         frame.push_bulk(Bytes::from("ping".as_bytes()));
@@ -76,4 +66,5 @@ impl Ping {
         }
         frame
     }
+    
 }
