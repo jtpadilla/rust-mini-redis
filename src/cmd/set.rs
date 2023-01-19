@@ -53,21 +53,18 @@ impl Set {
         let value = parse.next_bytes()?;
 
         // La expiracion es opcional (si no hay nada mas entonces se asigna None)
-        let mut expire = None;
-
-        // Se intenta parsear otra string
-        match parse.next_string() {
+        let expire: Option<Duration>  =  match parse.next_string() {
             Ok(s) if s.to_uppercase() == "EX" => {
                 // La expiracion esta especificada en segundos
                 // El siguiente valor es un numero entero
                 let secs = parse.next_int()?;
-                expire = Some(Duration::from_secs(secs));
+                Some(Duration::from_secs(secs))
             }
             Ok(s) if s.to_uppercase() == "PX" => {
                 // La expiracion esta especificada en milisegundos
                 // El siguiente valor es un numero entero
                 let ms = parse.next_int()?;
-                expire = Some(Duration::from_millis(ms));
+                Some(Duration::from_millis(ms))
             }
             Ok(_) => {
                 // No se soportan otras opciones
@@ -75,29 +72,34 @@ impl Set {
             },
             Err(EndOfStream) => {
                 // No hay nada que leer (no hay opciones)
+                Option::None
             }
             Err(err) => {
+                // Cualquier error pasa por aqui..
                 // All other errors are bubbled up, resulting in the connection
                 // being terminated.
                 return Err(err.into())
             },
-        }
+        };
 
         Ok(Set { key, value, expire })
     }
 
-    /// Apply the `Set` command to the specified `Db` instance.
-    ///
-    /// The response is written to `dst`. This is called by the server in order
-    /// to execute a received command.
+    /// Aplica el comando `Get` a la instancia de `Db` especificada.
+    /// 
+    /// La respuesta es escrita en ´dst´.
     #[instrument(skip(self, db, dst))]
     pub(crate) async fn apply(self, db: &Db, dst: &mut Connection) -> crate::Result<()> {
-        // Set the value in the shared database state.
+
+        // asigna a una clave y valor y opcionalmente una caducidad.
         db.set(self.key, self.value, self.expire);
 
-        // Create a success response and write it to `dst`.
+        // Prepara la respuesta satisfactoria.
         let response = Frame::Simple("OK".to_string());
+
         debug!(?response);
+
+        // Se envia la respuesta al cliente
         dst.write_frame(&response).await?;
 
         Ok(())
