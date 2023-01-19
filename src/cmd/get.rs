@@ -32,6 +32,8 @@ impl Get {
     /// # Formato del comando
     /// GET key
     /// 
+    /// Retorna el valor asociado a la clave o Err si el frame esta mal 
+    /// formado.
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Get> {
         // El primer argumento 'GET' ya ha sido consumido.
         //
