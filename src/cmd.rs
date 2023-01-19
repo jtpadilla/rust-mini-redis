@@ -60,29 +60,34 @@ impl Command {
             "unsubscribe" => Command::Unsubscribe(Unsubscribe::parse_frames(&mut parse)?),
             "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
             _ => {
-                // The command is not recognized and an Unknown command is
-                // returned.
+                // No se ha reconicido elcomando asi que se retorna 
+                // el comando `Unknown`.
                 //
-                // `return` is called here to skip the `finish()` call below. As
-                // the command is not recognized, there is most likely
-                // unconsumed fields remaining in the `Parse` instance.
+                // En este caso se utiliza return para evitar que la ejecucion 
+                // siga su curso normal.
                 return Ok(Command::Unknown(Unknown::new(command_name)));
             }
         };
 
-        // Check if there is any remaining unconsumed fields in the `Parse`
-        // value. If fields remain, this indicates an unexpected frame format
-        // and an error is returned.
+        // En el curso normal (cuando se ha reconicido y parseado
+        // el comando correctamente), se hace una verificacion final
+        // llamando al metodo `finish()` del parseador para verificar
+        // que no quiedan argumentos para consumir en el parseador.
+        // Que queden argumentos por consumir indica una trama irregular.
         parse.finish()?;
 
-        // The command has been successfully parsed
+        // El comando ha sido parseado satisfactoriamente
         Ok(command)
     }
 
-    /// Apply the command to the specified `Db` instance.
-    ///
-    /// The response is written to `dst`. This is called by the server in order
-    /// to execute a received command.
+    /// Aplica el comando a la instancia `Db`proporcionada.
+    /// 
+    /// Cada comando escribe la respuesta en la conexion
+    /// proporcionada `dst`.
+    /// 
+    /// Para la aplicacion de los comandos sobre las base de datos y su
+    /// posterior respuesta se invocan especificamente a un metodo segun 
+    /// el comando (tienen distinta firma).
     pub(crate) async fn apply(
         self,
         db: &Db,
@@ -98,13 +103,14 @@ impl Command {
             Subscribe(cmd) => cmd.apply(db, dst, shutdown).await,
             Ping(cmd) => cmd.apply(dst).await,
             Unknown(cmd) => cmd.apply(dst).await,
-            // `Unsubscribe` cannot be applied. It may only be received from the
-            // context of a `Subscribe` command.
+            // El comando 'Unsubscribe' no opera sobre la base de datos.
+            // Solo puede recibir comandos dentro del contexto del 
+            // comando `Subscribe`.
             Unsubscribe(_) => Err("`Unsubscribe` is unsupported in this context".into()),
         }
     }
 
-    /// Returns the command name
+    /// Obtiene el nombre del comando
     pub(crate) fn get_name(&self) -> &str {
         match self {
             Command::Get(_) => "get",
