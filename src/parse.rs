@@ -104,60 +104,71 @@ impl Parse {
                 // la inferencia de tipos sabemos que el destinatario es un `ParseError`.
                 // Como resultado 'StringInstance.into()' se convertira en 
                 // 'ParseError::from(stringInstance)'.
-                let string = format!(
-                    "protocol error; expected simple frame or bulk frame, got {:?}", 
-                    frame
-                );
+                let string = format!("protocol error; expected simple frame or bulk frame, got {:?}", frame);
                 let err = string.into();
                 Err(err)
             },
         }
     }
 
-    /// Return the next entry as raw bytes.
-    ///
-    /// If the next entry cannot be represented as raw bytes, an error is
-    /// returned.
+    /// Retorna la siguiente entrada como un paquete de bytes.
+    /// 
+    /// Si la siguiente entrada no puede ser obtenida como un grupo 
+    /// de bytes, se retornara un error.
     pub(crate) fn next_bytes(&mut self) -> Result<Bytes, ParseError> {
         match self.next()? {
-            // Both `Simple` and `Bulk` representation may be raw bytes.
+            // Tanto el tipo `Simple`como `Bulk` pueden representar bytes.
             //
-            // Although errors are stored as strings and could be represented as
-            // raw bytes, they are considered separate types.
-            Frame::Simple(s) => Ok(Bytes::from(s.into_bytes())),
-            Frame::Bulk(data) => Ok(data),
-            frame => Err(format!(
-                "protocol error; expected simple frame or bulk frame, got {:?}",
-                frame
-            )
-            .into()),
+            // Aunque los errores son almacenados como strings y podrian
+            // obtenerse como bytes, se consideraran tipos separados.
+            Frame::Simple(s) => {
+                Ok(Bytes::from(s.into_bytes()))
+            },
+            Frame::Bulk(data) => {
+                Ok(data)
+            },
+            frame =>{ 
+                let string = format!("protocol error; expected simple frame or bulk frame, got {:?}", frame);
+                let err = string.into();
+                Err(err)
+            },
         }
     }
 
-    /// Return the next entry as an integer.
-    ///
-    /// This includes `Simple`, `Bulk`, and `Integer` frame types. `Simple` and
-    /// `Bulk` frame types are parsed.
-    ///
-    /// If the next entry cannot be represented as an integer, then an error is
-    /// returned.
+    /// Retorna la siguiente entrada como in integer.
+    /// 
+    /// Esto incluye los tipos de frame `Simple`, `Bulk y `Integer` (de los
+    /// cuales `Simple` y `Bulk` son parseados)
+    /// 
+    /// Si la siguiente entrada no puede ser representada como un entero, 
+    /// se retornara un error.
     pub(crate) fn next_int(&mut self) -> Result<u64, ParseError> {
         use atoi::atoi;
 
         const MSG: &str = "protocol error; invalid number";
 
         match self.next()? {
-            // An integer frame type is already stored as an integer.
-            Frame::Integer(v) => Ok(v),
-            // Simple and bulk frames must be parsed as integers. If the parsing
-            // fails, an error is returned.
-            Frame::Simple(data) => atoi::<u64>(data.as_bytes()).ok_or_else(|| MSG.into()),
-            Frame::Bulk(data) => atoi::<u64>(&data).ok_or_else(|| MSG.into()),
-            frame => Err(format!("protocol error; expected int frame but got {:?}", frame).into()),
+            Frame::Integer(v) => {
+                // Un frame `Integer` ya esta representado como un entero.
+                Ok(v)
+            },
+            Frame::Simple(data) => {
+                // Puede ser parseado a un entero (si falla el parseo se retorna un error)
+                atoi::<u64>(data.as_bytes()).ok_or_else(|| MSG.into())
+            },
+            Frame::Bulk(data) => {
+                // Puede ser parseado a un entero (si falla el parseo se retorna un error)
+                atoi::<u64>(&data).ok_or_else(|| MSG.into())
+            },
+            frame => {
+                let string = format!("protocol error; expected int frame but got {:?}", frame);
+                let err = string.into();
+                Err(err)
+            },
         }
     }
 
-    /// Ensure there are no more entries in the array
+    /// Verifica que ya no hay mas entradas en el array
     pub(crate) fn finish(&mut self) -> Result<(), ParseError> {
         if self.parts.next().is_none() {
             Ok(())
@@ -167,18 +178,29 @@ impl Parse {
     }
 }
 
+// Se implementa core::convert::From 
+// para conversion String -> mini_redis::frame::ParseError
 impl From<String> for ParseError {
     fn from(src: String) -> ParseError {
         ParseError::Other(src.into())
     }
 }
 
+// Utiliza la implementacion automatica de core::convert::Into 
+// al implementar core::convert::From 
+// para conversion String -> mini_redis::frame::ParseError
 impl From<&str> for ParseError {
     fn from(src: &str) -> ParseError {
         src.to_string().into()
     }
 }
 
+// Implementa `std::error::Error` en `mini_redis::frame::ParseError'
+// para poder retornar el error estipulado de forma general
+// para el crate.
+impl std::error::Error for ParseError {}
+
+// Se implementa `fmt::Display`para poder visualizar el FrameError.
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -188,4 +210,3 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl std::error::Error for ParseError {}
