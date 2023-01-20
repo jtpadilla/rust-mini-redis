@@ -147,17 +147,21 @@ impl Subscribe {
 
                 // Recive frames desde la conexion que ha establecido el cliente
                 res = dst.read_frame() => {
-                    // Parsea los frames
+
+                    // Si ha habido actividad en la conexion...
                     let frame = match res? {
                         Some(frame) => {
+                            // ..  ha llegado un frame.
                             frame
                         },
                         // Esto ocurre cuando el cliente remoto ha cerrado la conexion
                         None => {
+                            // .. se ha cerrado la conexion.
                             return Ok(())
                         }
                     };
-                    // Con al frame recibido ejecuta el correspondiente comando
+
+                    // Tenemos un frame, hay que extraer el comando y ejecutarlo!
                     handle_command(
                         frame,
                         &mut self.channels,
