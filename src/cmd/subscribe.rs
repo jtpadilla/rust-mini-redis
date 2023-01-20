@@ -165,17 +165,17 @@ impl Subscribe {
                         dst,
                     ).await?;
                 }
+
+                // Peticion de parada del servidor
                 _ = shutdown.recv() => {
                     return Ok(());
                 }
+
             };
         }
     }
 
-    /// Converts the command into an equivalent `Frame`.
-    ///
-    /// This is called by the client when encoding a `Subscribe` command to send
-    /// to the server.
+    /// Convierte este comando en su representacion en un Frame.
     pub(crate) fn into_frame(self) -> Frame {
         let mut frame = Frame::array();
         frame.push_bulk(Bytes::from("subscribe".as_bytes()));
