@@ -23,7 +23,7 @@ pub struct Publish {
 }
 
 impl Publish {
-    /// Create a new `Publish` command which sends `message` on `channel`.
+    /// Crea un nuevo comando `Publish'
     pub(crate) fn new(channel: impl ToString, message: Bytes) -> Publish {
         Publish {
             channel: channel.to_string(),

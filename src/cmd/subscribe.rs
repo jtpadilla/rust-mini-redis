@@ -77,59 +77,87 @@ impl Subscribe {
         }
 
         // Retornamos la instancia de `Subscribe`.
-        Ok(Subscribe { channels })
+        Ok(
+            Subscribe { 
+                channels 
+            }
+        )
+        
     }
 
-    /// Apply the `Subscribe` command to the specified `Db` instance.
-    ///
-    /// This function is the entry point and includes the initial list of
-    /// channels to subscribe to. Additional `subscribe` and `unsubscribe`
-    /// commands may be received from the client and the list of subscriptions
-    /// are updated accordingly.
-    ///
-    /// [here]: https://redis.io/topics/pubsub
+    /// Se aplica el comando `Subscribe` a la `Db`.
+    /// 
+    /// Eata funcion es el punto de entrada que incluye la lista
+    /// inicial de canales a los que subscribirse. Adicionalmente
+    /// otros comandos `subscribe` y `unsubscribe` pueden recibirse 
+    /// desde el ciente y en consecuencia la lista de subscripciones
+    /// se actrualizara.
+    /// 
+    /// Este comando a diferencia de los otros comandos del servidor
+    /// utilizara la conexion para procesar frames relacionados con
+    /// la gestion de subscripciones que le llegaran por la conexion.
     pub(crate) async fn apply(
         mut self,
         db: &Db,
         dst: &mut Connection,
         shutdown: &mut Shutdown,
     ) -> crate::Result<()> {
-        // Each individual channel subscription is handled using a
-        // `sync::broadcast` channel. Messages are then fanned out to all
-        // clients currently subscribed to the channels.
+        // Cada canal individual de una subscripcion es gestionada
+        // mediante un canal `sync::broadcast`. Los mensajes son repartidos 
+        // a todos lso clientes que estan subscritos a los canales.
         //
-        // An individual client may subscribe to multiple channels and may
-        // dynamically add and remove channels from its subscription set. To
-        // handle this, a `StreamMap` is used to track active subscriptions. The
-        // `StreamMap` merges messages from individual broadcast channels as
-        // they are received.
+        // Un cliente individual puede subscribirse a multiples canales 
+        // y puede dinamicamente añadir y borrar subscripciones a su lista 
+        // de subscripciones.
+        //
+        // Para gestionar todo esto se utiliza un `StreamMap` el cual 
+        // permitira hacer un seguimiento de de las subscripciones activas.
+        // El `StreamMap`mezcla los mensajes desde los canales individuales
+        // de propagacion cuando son recibidos.
         let mut subscriptions = StreamMap::new();
 
         loop {
-            // `self.channels` is used to track additional channels to subscribe
-            // to. When new `SUBSCRIBE` commands are received during the
-            // execution of `apply`, the new channels are pushed onto this vec.
+            // Los 'channels' con los que se ha construido la instancia de 'Subscribe'
+            // son utilizados para las subscripciones iniciales.
+            //
+            // Cuando llegaran nuevos comandos de subscripciones estas se 
+            // incorporaran a la lista de subscripciones en curso.
+            //
+            // Por tanto existe un vector en el que se mantienen la lista de 
+            // subscripciones en curso para cada conexion.
             for channel_name in self.channels.drain(..) {
                 subscribe_to_channel(channel_name, &mut subscriptions, db, dst).await?;
             }
 
-            // Wait for one of the following to happen:
-            //
-            // - Receive a message from one of the subscribed channels.
-            // - Receive a subscribe or unsubscribe command from the client.
-            // - A server shutdown signal.
+            // La ejecucion del comando 'Subscribe' implica la ejecucion 
+            // de un proceso asincrono que permite recibir altas/bajas de subscripciones
+            // asi como enviar al cliente los datos recibidos por los canales
+            // a los que se estan subscritos.
+            // 
+            // Esta terea podra:
+            // - Recibir un mensaje desde un canal al que se esta subscrito.
+            // - Recibir un comando subscribe/unsubscribe desd eel cliente
+            // - Recibir una indicacion de shutdown desde el servidor.
             select! {
-                // Receive messages from subscribed channels
+
+                // Recibe mensajes desde los canales a los que esta subscrito
                 Some((channel_name, msg)) = subscriptions.next() => {
                     dst.write_frame(&make_message_frame(channel_name, msg)).await?;
                 }
-                res = dst.read_frame() => {
-                    let frame = match res? {
-                        Some(frame) => frame,
-                        // This happens if the remote client has disconnected.
-                        None => return Ok(())
-                    };
 
+                // Recive frames desde la conexion que ha establecido el cliente
+                res = dst.read_frame() => {
+                    // Parsea los frames
+                    let frame = match res? {
+                        Some(frame) => {
+                            frame
+                        },
+                        // Esto ocurre cuando el cliente remoto ha cerrado la conexion
+                        None => {
+                            return Ok(())
+                        }
+                    };
+                    // Con al frame recibido ejecuta el correspondiente comando
                     handle_command(
                         frame,
                         &mut self.channels,
