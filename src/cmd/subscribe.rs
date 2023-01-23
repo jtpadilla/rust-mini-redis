@@ -198,7 +198,7 @@ async fn subscribe_to_channel(
 ) -> crate::Result<()> {
     let mut rx = db.subscribe(channel_name.clone());
 
-    // Subscribe to the channel.
+    // Se crea la subscripcion al canal.
     let rx = Box::pin(async_stream::stream! {
         loop {
             match rx.recv().await {
@@ -210,38 +210,35 @@ async fn subscribe_to_channel(
         }
     });
 
-    // Track subscription in this client's subscription set.
+    // Seguimiento de la suscripción en el conjunto de suscripciones de este cliente.
     subscriptions.insert(channel_name.clone(), rx);
 
-    // Respond with the successful subscription
+    // Se le responde al cliente que la subscripcion ha sido satisfactoria.
     let response = make_subscribe_frame(channel_name, subscriptions.len());
     dst.write_frame(&response).await?;
 
     Ok(())
 }
 
-/// Handle a command received while inside `Subscribe::apply`. Only subscribe
-/// and unsubscribe commands are permitted in this context.
-///
-/// Any new subscriptions are appended to `subscribe_to` instead of modifying
-/// `subscriptions`.
+/// Gestiona los comandos recibidos dentro del contecto que se crea en
+/// la ejecucion de `subscribe`. Unicamente los comandos subscribe y
+/// unsubscribe son permitidos.
+/// 
+/// Una nueva subscripcion es incorporada a `subscribe_to`en lugar de
+/// modificar `subscriptions`.
 async fn handle_command(
     frame: Frame,
     subscribe_to: &mut Vec<String>,
     subscriptions: &mut StreamMap<String, Messages>,
     dst: &mut Connection,
 ) -> crate::Result<()> {
-    // A command has been received from the client.
-    //
-    // Only `SUBSCRIBE` and `UNSUBSCRIBE` commands are permitted
-    // in this context.
     match Command::from_frame(frame)? {
         Command::Subscribe(subscribe) => {
-            // The `apply` method will subscribe to the channels we add to this
-            // vector.
+            // Se realiza la subscripcion
             subscribe_to.extend(subscribe.channels.into_iter());
         }
         Command::Unsubscribe(mut unsubscribe) => {
+
             // If no channels are specified, this requests unsubscribing from
             // **all** channels. To implement this, the `unsubscribe.channels`
             // vec is populated with the list of channels currently subscribed
