@@ -140,38 +140,35 @@ impl Subscribe {
             // - Recibir una indicacion de shutdown desde el servidor.
             select! {
 
-                // Recibe mensajes desde los canales a los que esta subscrito
+                // SELECT 1 - Recibe mensajes desde los canales a los que esta subscrito
                 Some((channel_name, msg)) = subscriptions.next() => {
                     dst.write_frame(&make_message_frame(channel_name, msg)).await?;
                 }
 
-                // Recive frames desde la conexion que ha establecido el cliente
+                // SELECT 2 - Recive frames desde la conexion que ha establecido el cliente
                 res = dst.read_frame() => {
 
-                    // Si ha habido actividad en la conexion...
+                    // Algo ha pasado en la conexion...
                     let frame = match res? {
                         Some(frame) => {
                             // ..  ha llegado un frame.
                             frame
                         },
-                        // Esto ocurre cuando el cliente remoto ha cerrado la conexion
                         None => {
                             // .. se ha cerrado la conexion.
                             return Ok(())
                         }
                     };
 
-                    // Tenemos un frame, hay que extraer el comando y ejecutarlo!
-                    handle_command(
-                        frame,
-                        &mut self.channels,
-                        &mut subscriptions,
-                        dst,
-                    ).await?;
+                    // Tenemos un frame, hay que extraer el comando y ejecutarlo
+                    // aunque solo los soportados dentro del contexto de un
+                    // subscribe.
+                    handle_command(frame, &mut self.channels, &mut subscriptions, dst).await?;
                 }
 
-                // Peticion de parada del servidor
+                // SELECT 3 - Peticion de parada del servidor
                 _ = shutdown.recv() => {
+                    // Se ha llegado una solicitud de finalizacion, salimos de 
                     return Ok(());
                 }
 
@@ -220,7 +217,7 @@ async fn subscribe_to_channel(
     Ok(())
 }
 
-/// Gestiona los comandos recibidos dentro del contecto que se crea en
+/// Gestiona los comandos recibidos dentro del contexto que se crea en
 /// la ejecucion de `subscribe`. Unicamente los comandos subscribe y
 /// unsubscribe son permitidos.
 /// 
@@ -232,18 +229,32 @@ async fn handle_command(
     subscriptions: &mut StreamMap<String, Messages>,
     dst: &mut Connection,
 ) -> crate::Result<()> {
+
+    // Se utiliza de nuevo `Command::from_frame` para determinar que comando se ha recibido.
     match Command::from_frame(frame)? {
+
         Command::Subscribe(subscribe) => {
             // Se realiza la subscripcion
+            // la lista de subcripciones recibidas en el comando se carga 
+            // en la lista de subscripciones de la instancia del Subscribe.
+            // Yo creo que aqui hay un error porque ademas abria que incorporar
+            // en el StreamMap la subscripcion....
+            // (ahora no estoy preparado para verfiicar esto)
             subscribe_to.extend(subscribe.channels.into_iter());
         }
+
         Command::Unsubscribe(mut unsubscribe) => {
 
-            // If no channels are specified, this requests unsubscribing from
-            // **all** channels. To implement this, the `unsubscribe.channels`
-            // vec is populated with the list of channels currently subscribed
-            // to.
+            // Si hemos llagado aqui es porque estando dentro del contexto de 
+            // una subscripcion se ha recibidos un comando 'Unsubscribe'.
+            // La llamada a 'Command::from_frame' loha instanciado y esta 
+            // instancia contiene en el atributo 'channels' la lista de 
+            // canales de los que hay que retirar la subscripcion.
+
             if unsubscribe.channels.is_empty() {
+                // Si en el 'Unsubscribe' no hay ningun canal, entonces se
+                // interpreta que hay que hacer el Unsubscribe de todos 
+                // los canales a las que se esta ahora subscrito.
                 unsubscribe.channels = subscriptions
                     .keys()
                     .map(|channel_name| channel_name.to_string())
@@ -256,11 +267,16 @@ async fn handle_command(
                 let response = make_unsubscribe_frame(channel_name, subscriptions.len());
                 dst.write_frame(&response).await?;
             }
+
         }
+
         command => {
+            // El comando recibido no es soportado asi que se crea una instancia
+            // del comando especial `Unknown' y se delega el tratamiento en el.
             let cmd = Unknown::new(command.get_name());
             cmd.apply(dst).await?;
         }
+
     }
     Ok(())
 }
