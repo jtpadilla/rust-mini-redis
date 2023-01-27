@@ -40,8 +40,6 @@ impl Publish {
     /// # Formato del comando
     /// PUBLISH channel message
     /// 
-    /// Parse a `Publish` instance from a received frame.
-    /// 
     /// Retorna el mensaje que se ha publicado o Err si la trama esta 
     /// mal formada.
     ///

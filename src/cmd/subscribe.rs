@@ -281,7 +281,7 @@ async fn handle_command(
     Ok(())
 }
 
-/// Creates the response to a subcribe request.
+/// Crea la respuesta al request subscribe.
 ///
 /// All of these functions take the `channel_name` as a `String` instead of
 /// a `&str` since `Bytes::from` can reuse the allocation in the `String`, and
@@ -295,7 +295,7 @@ fn make_subscribe_frame(channel_name: String, num_subs: usize) -> Frame {
     response
 }
 
-/// Creates the response to an unsubcribe request.
+/// Crea la respuesta al request unsubscribe.
 fn make_unsubscribe_frame(channel_name: String, num_subs: usize) -> Frame {
     let mut response = Frame::array();
     response.push_bulk(Bytes::from_static(b"unsubscribe"));
@@ -304,8 +304,8 @@ fn make_unsubscribe_frame(channel_name: String, num_subs: usize) -> Frame {
     response
 }
 
-/// Creates a message informing the client about a new message on a channel that
-/// the client subscribes to.
+/// Crea un mensaje que informa al cliente sobre nuevos mensajes en un canal
+/// al cual el cliente esta subscrito.
 fn make_message_frame(channel_name: String, msg: Bytes) -> Frame {
     let mut response = Frame::array();
     response.push_bulk(Bytes::from_static(b"message"));
@@ -315,52 +315,41 @@ fn make_message_frame(channel_name: String, msg: Bytes) -> Frame {
 }
 
 impl Unsubscribe {
-    /// Create a new `Unsubscribe` command with the given `channels`.
+    /// Crea una nueva instancia del comando `Unsubscribe` con 
+    /// los canales que se han proporcionado.
     pub(crate) fn new(channels: &[String]) -> Unsubscribe {
         Unsubscribe {
             channels: channels.to_vec(),
         }
     }
 
-    /// Parse a `Unsubscribe` instance from a received frame.
-    ///
-    /// The `Parse` argument provides a cursor-like API to read fields from the
-    /// `Frame`. At this point, the entire frame has already been received from
-    /// the socket.
-    ///
-    /// The `UNSUBSCRIBE` string has already been consumed.
-    ///
-    /// # Returns
-    ///
-    /// On success, the `Unsubscribe` value is returned. If the frame is
-    /// malformed, `Err` is returned.
-    ///
-    /// # Format
-    ///
-    /// Expects an array frame containing at least one entry.
-    ///
-    /// ```text
+    /// Parsea una instancia de `Unsubscribe` desde el frame que se ha recibido.
+    /// 
+    /// # Formato del comando
     /// UNSUBSCRIBE [channel [channel ...]]
-    /// ```
+    /// 
+    /// 
+    /// Retorna el el valor de `Unsubscribe` o Err si la trama esta 
+    /// mal formada.
+    ///
     pub(crate) fn parse_frames(parse: &mut Parse) -> Result<Unsubscribe, ParseError> {
         use ParseError::EndOfStream;
 
-        // There may be no channels listed, so start with an empty vec.
+        // Se crea un array vacia para poder cargar los canales recibidos
         let mut channels = vec![];
 
-        // Each entry in the frame must be a string or the frame is malformed.
-        // Once all values in the frame have been consumed, the command is fully
-        // parsed.
+        // Cada entrada en el frame debe ser una string o el fram estara mal formado.
         loop {
             match parse.next_string() {
-                // A string has been consumed from the `parse`, push it into the
-                // list of channels to unsubscribe from.
+
+                // Una string se ha consumidos desde el parse, se colocal en la 
+                // lista de canales a los que hacer un unsubscribe.
                 Ok(s) => channels.push(s),
-                // The `EndOfStream` error indicates there is no further data to
-                // parse.
+
+                // El error `EndOfStream` indica que no hay mas datos para parsear
                 Err(EndOfStream) => break,
-                // All other errors are bubbled up, resulting in the connection
-                // being terminated.
+
+                // El resto de errores son englobados y la conexion terminara.
                 Err(err) => return Err(err),
             }
         }
@@ -368,10 +357,7 @@ impl Unsubscribe {
         Ok(Unsubscribe { channels })
     }
 
-    /// Converts the command into an equivalent `Frame`.
-    ///
-    /// This is called by the client when encoding an `Unsubscribe` command to
-    /// send to the server.
+    /// Convierte el comando en el `Frame` equivalente.
     pub(crate) fn into_frame(self) -> Frame {
         let mut frame = Frame::array();
         frame.push_bulk(Bytes::from("unsubscribe".as_bytes()));
@@ -382,4 +368,5 @@ impl Unsubscribe {
 
         frame
     }
+
 }

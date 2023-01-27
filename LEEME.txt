@@ -1,6 +1,20 @@
 El estudio de este codigo se tiene que hacer en este orden:
 
-1 - Db (db.rs)
-2 - Frame (frame.rs)
-3 - Parse (parse.rs)
-4 - 
+1   - db.rs
+2   - frame.rs
+3   - parse.rs
+4   - cmd.rs
+4.1 - cmd/get.rs
+4.2 - cmd/ping.rs
+4.3 - cmd/publish.rs
+4.4 - cmd/set.rs
+4.5 - cmd/unknown.rs
+4.6 - cmd/subscribe.rs
+
+x   - blocking_client.rs
+x   - buffer.rs
+x   - client.rs
+
+x   - connection.rs
+x   - server.rs
+x   - shutdown.rs
