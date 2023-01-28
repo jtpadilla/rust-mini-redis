@@ -1,7 +1,8 @@
 //! Minimal Redis server implementation
 //!
-//! Provides an async `run` function that listens for inbound connections,
-//! spawning a task per connection.
+//! Proporciona una funcion asincrona `run` que escucha las conexiones
+//! entrantes, proporcionandole a cada una de ellas una terea para
+//! su ejecucion.
 
 use crate::{Command, Connection, Db, DbDropGuard, Shutdown};
 
@@ -12,48 +13,41 @@ use tokio::sync::{broadcast, mpsc, Semaphore};
 use tokio::time::{self, Duration};
 use tracing::{debug, error, info, instrument};
 
-/// Server listener state. Created in the `run` call. It includes a `run` method
-/// which performs the TCP listening and initialization of per-connection state.
+/// Estado del servidor de conexiones. Se creara en la llamada a `run`.
+/// Incluye un metodo `run`el cual se encarga de escuchar las conexiones entrantes
+/// por TCP y de la iniciar el proceso de para cada conexion.
 #[derive(Debug)]
 struct Listener {
-    /// Shared database handle.
-    ///
-    /// Contains the key / value store as well as the broadcast channels for
-    /// pub/sub.
-    ///
-    /// This holds a wrapper around an `Arc`. The internal `Db` can be
-    /// retrieved and passed into the per connection state (`Handler`).
+
+    /// Base de datos compartida.
+    /// Contiene tanto el almacen key/value asi como los canales de difucion
+    /// para el pub/sub.
     db_holder: DbDropGuard,
 
-    /// TCP listener supplied by the `run` caller.
+    /// TCP listener
     listener: TcpListener,
 
-    /// Limit the max number of connections.
-    ///
-    /// A `Semaphore` is used to limit the max number of connections. Before
-    /// attempting to accept a new connection, a permit is acquired from the
-    /// semaphore. If none are available, the listener waits for one.
-    ///
-    /// When handlers complete processing a connection, the permit is returned
-    /// to the semaphore.
+    /// Limita el numero maximo de conexiones.
+    /// 
+    /// Un `Semaphore' es utilizado para limitar el numero maximo 
+    /// de conexiones. Antes de intentar una conexion, un permiso tiene
+    /// que ser adquirido por el semaforo. Si no hay un permiso disponible,
+    /// el listener esperara por uno.
+    /// 
+    /// Cuando los handlers completan el procesado de una conexion, el permiso
+    /// es retornado al semaforo.
     limit_connections: Arc<Semaphore>,
 
-    /// Broadcasts a shutdown signal to all active connections.
-    ///
-    /// The initial `shutdown` trigger is provided by the `run` caller. The
-    /// server is responsible for gracefully shutting down active connections.
-    /// When a connection task is spawned, it is passed a broadcast receiver
-    /// handle. When a graceful shutdown is initiated, a `()` value is sent via
-    /// the broadcast::Sender. Each active connection receives it, reaches a
-    /// safe terminal state, and completes the task.
+    /// Difunde una senyal de parada para todas las conexiones activas.
     notify_shutdown: broadcast::Sender<()>,
 
-    /// Used as part of the graceful shutdown process to wait for client
-    /// connections to complete processing.
-    ///
-    /// Tokio channels are closed once all `Sender` handles go out of scope.
-    /// When a channel is closed, the receiver receives `None`. This is
-    /// leveraged to detect all connection handlers completing. When a
+    /// Usado como parte del proceso de parada ordenada para esperar que las
+    /// conexiones de los clientes completen el procesamiento.
+    /// 
+    /// Los canales de Tokio son cerrados cuando todos los `Sender' salen
+    /// fuera del scope. Cuando el canal es cerrado, el receptor recibe `None`.
+    /// 
+    /// This is leveraged to detect all connection handlers completing. When a
     /// connection handler is initialized, it is assigned a clone of
     /// `shutdown_complete_tx`. When the listener shuts down, it drops the
     /// sender held by this `shutdown_complete_tx` field. Once all handler tasks
@@ -68,11 +62,6 @@ struct Listener {
 /// commands to `db`.
 #[derive(Debug)]
 struct Handler {
-    /// Shared database handle.
-    ///
-    /// When a command is received from `connection`, it is applied with `db`.
-    /// The implementation of the command is in the `cmd` module. Each command
-    /// will need to interact with `db` in order to complete the work.
     db: Db,
 
     /// The TCP connection decorated with the redis protocol encoder / decoder
@@ -98,29 +87,17 @@ struct Handler {
     _shutdown_complete: mpsc::Sender<()>,
 }
 
-/// Maximum number of concurrent connections the redis server will accept.
-///
-/// When this limit is reached, the server will stop accepting connections until
-/// an active connection terminates.
-///
-/// A real application will want to make this value configurable, but for this
-/// example, it is hard coded.
-///
-/// This is also set to a pretty low value to discourage using this in
-/// production (you'd think that all the disclaimers would make it obvious that
-/// this is not a serious project... but I thought that about mini-http as
-/// well).
 const MAX_CONNECTIONS: usize = 250;
 
-/// Run the mini-redis server.
+/// Ejecuta el servidor mini-redis.
 ///
-/// Accepts connections from the supplied listener. For each inbound connection,
-/// a task is spawned to handle that connection. The server runs until the
-/// `shutdown` future completes, at which point the server shuts down
-/// gracefully.
-///
-/// `tokio::signal::ctrl_c()` can be used as the `shutdown` argument. This will
-/// listen for a SIGINT signal.
+/// Acepta conexiones desde el listener proporcionado. Para cada conexion 
+/// entrante se iniciara una tarea.
+/// 
+/// El servidor se ejecutara hasta que el future `shutdown` se complete.
+/// 
+/// La senyal `tokio::signal::ctrl_c()` puede ser utilizada para iniciar la 
+/// parada ordenada.
 pub async fn run(listener: TcpListener, shutdown: impl Future) {
     // When the provided `shutdown` future completes, we must send a shutdown
     // message to all active connections. We use a broadcast channel for this
