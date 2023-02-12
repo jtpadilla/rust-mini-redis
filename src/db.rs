@@ -75,7 +75,7 @@ struct State {
     /// fecha de vencimiento. Esto permite a la tarea secundaria iterar por 
     /// este mapa para encontrar el siguiente valor que expira.
     /// 
-    /// Aunque es poco probable, es posible que se cere un venciamiento para
+    /// Aunque es poco probable, es posible que se cree un venciamiento para
     /// el mismo instante. Por ese motivo, un 'Instant' es insuficiente como clave.
     /// Un identificador unico 'u64' se utiliza para garantiza que la clave sea unica.
     expirations: BTreeMap<(Instant, u64), String>,

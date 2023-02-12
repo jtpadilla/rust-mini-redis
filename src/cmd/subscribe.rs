@@ -168,7 +168,7 @@ impl Subscribe {
 
                 // SELECT 3 - Peticion de parada del servidor
                 _ = shutdown.recv() => {
-                    // Se ha llegado una solicitud de finalizacion, salimos de 
+                    // Se ha llegado una solicitud de finalizacion, salimos del bucle.
                     return Ok(());
                 }
 

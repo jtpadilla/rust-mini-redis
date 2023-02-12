@@ -25,6 +25,10 @@
 //!   intermediate representation between a "command" and the byte
 //!   representation.
 
+mod db;
+use db::Db;
+use db::DbDropGuard;
+
 pub mod blocking_client;
 pub mod client;
 
@@ -36,10 +40,6 @@ pub use connection::Connection;
 
 pub mod frame;
 pub use frame::Frame;
-
-mod db;
-use db::Db;
-use db::DbDropGuard;
 
 mod parse;
 use parse::{Parse, ParseError};
