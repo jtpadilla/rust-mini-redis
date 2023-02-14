@@ -56,16 +56,16 @@ use shutdown::Shutdown;
 pub const DEFAULT_PORT: u16 = 6379;
 
 /// Error retornado pro la mayoria de funciones.
-/// 
+///
 /// En una aplicacion real se puede considerar especializar la
 /// gestion de errores del crate por ejemplo definiendo el error
 /// como una enumeracion de causas.
-/// 
+///
 /// Pero para este ejemplo se utilizara un boxed `std::error::Error`.
-/// 
-/// Por motivos de rendimiento, se evitara el boxing en cualquier 
+///
+/// Por motivos de rendimiento, se evitara el boxing en cualquier
 /// "hot path" o llamadas a metodos muy frecuentes utilizando en este
-/// casi un error definido mediante 'enum'. Se utilizara el error 
+/// casi un error definido mediante 'enum'. Se utilizara el error
 /// definido como una 'enum' pero de implementara `std::error:Error` lo
 /// cual permitira retornarlo para convertirlo en un `Box<dyn std::error::Error>`
 pub type Error = Box<dyn std::error::Error + Send + Sync>;

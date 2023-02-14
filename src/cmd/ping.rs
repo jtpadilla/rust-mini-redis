@@ -20,19 +20,19 @@ impl Ping {
     }
 
     /// Parsea una instancia de `Ping` desde el frame que se ha recibido.
-    /// 
-    /// Como parametro para el parseado se recibe una instancia de 
-    /// `Parse` con todos los argumentos que se han recibido y 
+    ///
+    /// Como parametro para el parseado se recibe una instancia de
+    /// `Parse` con todos los argumentos que se han recibido y
     /// que pueden ser consumidos.
-    /// 
+    ///
     /// # Formato del comando
     /// PING [message]
-    /// 
+    ///
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Ping> {
         // El primer argumento 'PING' ya ha sido consumido.
         //
         // El parseador nos permite acceder a los argumentos pendientes
-        // generando un error en caso de que no existan o de que no 
+        // generando un error en caso de que no existan o de que no
         // sean del tipo esperado.
         match parse.next_string() {
             Ok(msg) => Ok(Ping::new(Some(msg))),
@@ -42,7 +42,7 @@ impl Ping {
     }
 
     /// Aplica el comando `Ping` (en este caso no utiliza la basde de datos).
-    /// 
+    ///
     /// La respuesta es escrita en ´dst´.
     #[instrument(skip(self, dst))]
     pub(crate) async fn apply(self, dst: &mut Connection) -> crate::Result<()> {
@@ -66,5 +66,4 @@ impl Ping {
         }
         frame
     }
-    
 }

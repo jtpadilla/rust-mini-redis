@@ -32,25 +32,25 @@ pub enum Command {
 
 impl Command {
     /// Parsea el comando desde el Frame recibido.
-    /// El frame que se proporciona como parametro 
+    /// El frame que se proporciona como parametro
     /// debe ser una variante 'Frame::Array'
     ///
     /// # Retorno
-    /// En caso de exito una variante del comando es retornada, 
+    /// En caso de exito una variante del comando es retornada,
     /// en caso contrario se retornara `crate::Error'.
     pub fn from_frame(frame: Frame) -> crate::Result<Command> {
-        // El valor es decorado con un `Parse`. Parse proporciona 
+        // El valor es decorado con un `Parse`. Parse proporciona
         // una API tipo "cursor" que permite parsear los comandos mas facilmente.
         let mut parse = Parse::new(frame)?;
 
         // Una vez tenemos todos los frames del array accesibles a traves del
         // parseador, obtenemos el primer frame que debe ser una String
         // que contiene el nombre del comando.
-        // Este nombre del comando se pasa a minusculas para buscar 
+        // Este nombre del comando se pasa a minusculas para buscar
         // la coinicidencia con el comando.
         let command_name = parse.next_string()?.to_lowercase();
 
-        // Una vez identificado el comando se deriva a cada comando el 
+        // Una vez identificado el comando se deriva a cada comando el
         // procesado del resto de parametros.
         let command = match &command_name[..] {
             "get" => Command::Get(Get::parse_frames(&mut parse)?),
@@ -60,10 +60,10 @@ impl Command {
             "unsubscribe" => Command::Unsubscribe(Unsubscribe::parse_frames(&mut parse)?),
             "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
             _ => {
-                // No se ha reconicido elcomando asi que se retorna 
+                // No se ha reconicido elcomando asi que se retorna
                 // el comando `Unknown`.
                 //
-                // En este caso se utiliza return para evitar que la ejecucion 
+                // En este caso se utiliza return para evitar que la ejecucion
                 // siga su curso normal.
                 return Ok(Command::Unknown(Unknown::new(command_name)));
             }
@@ -81,12 +81,12 @@ impl Command {
     }
 
     /// Aplica el comando a la instancia `Db`proporcionada.
-    /// 
+    ///
     /// Cada comando escribe la respuesta en la conexion
     /// proporcionada `dst`.
-    /// 
+    ///
     /// Para la aplicacion de los comandos sobre las base de datos y su
-    /// posterior respuesta se invocan especificamente a un metodo segun 
+    /// posterior respuesta se invocan especificamente a un metodo segun
     /// el comando (tienen distinta firma).
     pub(crate) async fn apply(
         self,
@@ -104,7 +104,7 @@ impl Command {
             Ping(cmd) => cmd.apply(dst).await,
             Unknown(cmd) => cmd.apply(dst).await,
             // El comando 'Unsubscribe' no opera sobre la base de datos.
-            // Solo puede recibir comandos dentro del contexto del 
+            // Solo puede recibir comandos dentro del contexto del
             // comando `Subscribe`.
             Unsubscribe(_) => Err("`Unsubscribe` is unsupported in this context".into()),
         }

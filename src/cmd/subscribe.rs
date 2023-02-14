@@ -8,9 +8,9 @@ use tokio::sync::broadcast;
 use tokio_stream::{Stream, StreamExt, StreamMap};
 
 /// Subscribe el cliente a uno o mas canales.
-/// 
+///
 /// Una vez un client entra en estado subscrito ya no acepta el envio de
-/// ningun otro comando, excepto comandos adicionales SUBSCRIBE, PSUBSCRIBE, 
+/// ningun otro comando, excepto comandos adicionales SUBSCRIBE, PSUBSCRIBE,
 /// UNSUBSCRIBE, PUNSUBSCRIBE, PING y QUIT.
 #[derive(Debug)]
 pub struct Subscribe {
@@ -41,19 +41,19 @@ impl Subscribe {
         }
     }
 
-    /// 
+    ///
     /// Parsea una instancia de `Set` desde el frame que se ha recibido.
-    /// 
-    /// Como parametro para el parseado se recibe una instancia de 
-    /// `Parse` con todos los argumentos que se han recibido y 
+    ///
+    /// Como parametro para el parseado se recibe una instancia de
+    /// `Parse` con todos los argumentos que se han recibido y
     /// que pueden ser consumidos.
-    /// 
+    ///
     /// # Formato del comando
     /// SUBSCRIBE channel [channel ...]
-    /// 
+    ///
     /// # Retorno
     /// Retorna la string `SUBSCRIBE` o Err el el frame esta mal formado.
-    /// 
+    ///
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Subscribe> {
         use ParseError::EndOfStream;
 
@@ -77,22 +77,17 @@ impl Subscribe {
         }
 
         // Retornamos la instancia de `Subscribe`.
-        Ok(
-            Subscribe { 
-                channels 
-            }
-        )
-        
+        Ok(Subscribe { channels })
     }
 
     /// Se aplica el comando `Subscribe` a la `Db`.
-    /// 
+    ///
     /// Eata funcion es el punto de entrada que incluye la lista
     /// inicial de canales a los que subscribirse. Adicionalmente
-    /// otros comandos `subscribe` y `unsubscribe` pueden recibirse 
+    /// otros comandos `subscribe` y `unsubscribe` pueden recibirse
     /// desde el ciente y en consecuencia la lista de subscripciones
     /// se actrualizara.
-    /// 
+    ///
     /// Este comando a diferencia de los otros comandos del servidor
     /// utilizara la conexion para procesar frames relacionados con
     /// la gestion de subscripciones que le llegaran por la conexion.
@@ -103,14 +98,14 @@ impl Subscribe {
         shutdown: &mut Shutdown,
     ) -> crate::Result<()> {
         // Cada canal individual de una subscripcion es gestionada
-        // mediante un canal `sync::broadcast`. Los mensajes son repartidos 
+        // mediante un canal `sync::broadcast`. Los mensajes son repartidos
         // a todos lso clientes que estan subscritos a los canales.
         //
-        // Un cliente individual puede subscribirse a multiples canales 
-        // y puede dinamicamente añadir y borrar subscripciones a su lista 
+        // Un cliente individual puede subscribirse a multiples canales
+        // y puede dinamicamente añadir y borrar subscripciones a su lista
         // de subscripciones.
         //
-        // Para gestionar todo esto se utiliza un `StreamMap` el cual 
+        // Para gestionar todo esto se utiliza un `StreamMap` el cual
         // permitira hacer un seguimiento de de las subscripciones activas.
         // El `StreamMap`mezcla los mensajes desde los canales individuales
         // de propagacion cuando son recibidos.
@@ -120,20 +115,20 @@ impl Subscribe {
             // Los 'channels' con los que se ha construido la instancia de 'Subscribe'
             // son utilizados para las subscripciones iniciales.
             //
-            // Cuando llegaran nuevos comandos de subscripciones estas se 
+            // Cuando llegaran nuevos comandos de subscripciones estas se
             // incorporaran a la lista de subscripciones en curso.
             //
-            // Por tanto existe un vector en el que se mantienen la lista de 
+            // Por tanto existe un vector en el que se mantienen la lista de
             // subscripciones en curso para cada conexion.
             for channel_name in self.channels.drain(..) {
                 subscribe_to_channel(channel_name, &mut subscriptions, db, dst).await?;
             }
 
-            // La ejecucion del comando 'Subscribe' implica la ejecucion 
+            // La ejecucion del comando 'Subscribe' implica la ejecucion
             // de un proceso asincrono que permite recibir altas/bajas de subscripciones
             // asi como enviar al cliente los datos recibidos por los canales
             // a los que se estan subscritos.
-            // 
+            //
             // Esta terea podra:
             // - Recibir un mensaje desde un canal al que se esta subscrito.
             // - Recibir un comando subscribe/unsubscribe desd eel cliente
@@ -220,7 +215,7 @@ async fn subscribe_to_channel(
 /// Gestiona los comandos recibidos dentro del contexto que se crea en
 /// la ejecucion de `subscribe`. Unicamente los comandos subscribe y
 /// unsubscribe son permitidos.
-/// 
+///
 /// Una nueva subscripcion es incorporada a `subscribe_to`en lugar de
 /// modificar `subscriptions`.
 async fn handle_command(
@@ -229,13 +224,11 @@ async fn handle_command(
     subscriptions: &mut StreamMap<String, Messages>,
     dst: &mut Connection,
 ) -> crate::Result<()> {
-
     // Se utiliza de nuevo `Command::from_frame` para determinar que comando se ha recibido.
     match Command::from_frame(frame)? {
-
         Command::Subscribe(subscribe) => {
             // Se realiza la subscripcion
-            // la lista de subcripciones recibidas en el comando se carga 
+            // la lista de subcripciones recibidas en el comando se carga
             // en la lista de subscripciones de la instancia del Subscribe.
             // Yo creo que aqui hay un error porque ademas abria que incorporar
             // en el StreamMap la subscripcion....
@@ -244,16 +237,15 @@ async fn handle_command(
         }
 
         Command::Unsubscribe(mut unsubscribe) => {
-
-            // Si hemos llagado aqui es porque estando dentro del contexto de 
+            // Si hemos llagado aqui es porque estando dentro del contexto de
             // una subscripcion se ha recibidos un comando 'Unsubscribe'.
-            // La llamada a 'Command::from_frame' loha instanciado y esta 
-            // instancia contiene en el atributo 'channels' la lista de 
+            // La llamada a 'Command::from_frame' loha instanciado y esta
+            // instancia contiene en el atributo 'channels' la lista de
             // canales de los que hay que retirar la subscripcion.
 
             if unsubscribe.channels.is_empty() {
                 // Si en el 'Unsubscribe' no hay ningun canal, entonces se
-                // interpreta que hay que hacer el Unsubscribe de todos 
+                // interpreta que hay que hacer el Unsubscribe de todos
                 // los canales a las que se esta ahora subscrito.
                 unsubscribe.channels = subscriptions
                     .keys()
@@ -267,7 +259,6 @@ async fn handle_command(
                 let response = make_unsubscribe_frame(channel_name, subscriptions.len());
                 dst.write_frame(&response).await?;
             }
-
         }
 
         command => {
@@ -276,7 +267,6 @@ async fn handle_command(
             let cmd = Unknown::new(command.get_name());
             cmd.apply(dst).await?;
         }
-
     }
     Ok(())
 }
@@ -315,7 +305,7 @@ fn make_message_frame(channel_name: String, msg: Bytes) -> Frame {
 }
 
 impl Unsubscribe {
-    /// Crea una nueva instancia del comando `Unsubscribe` con 
+    /// Crea una nueva instancia del comando `Unsubscribe` con
     /// los canales que se han proporcionado.
     pub(crate) fn new(channels: &[String]) -> Unsubscribe {
         Unsubscribe {
@@ -324,12 +314,12 @@ impl Unsubscribe {
     }
 
     /// Parsea una instancia de `Unsubscribe` desde el frame que se ha recibido.
-    /// 
+    ///
     /// # Formato del comando
     /// UNSUBSCRIBE [channel [channel ...]]
-    /// 
-    /// 
-    /// Retorna el el valor de `Unsubscribe` o Err si la trama esta 
+    ///
+    ///
+    /// Retorna el el valor de `Unsubscribe` o Err si la trama esta
     /// mal formada.
     ///
     pub(crate) fn parse_frames(parse: &mut Parse) -> Result<Unsubscribe, ParseError> {
@@ -341,8 +331,7 @@ impl Unsubscribe {
         // Cada entrada en el frame debe ser una string o el fram estara mal formado.
         loop {
             match parse.next_string() {
-
-                // Una string se ha consumidos desde el parse, se colocal en la 
+                // Una string se ha consumidos desde el parse, se colocal en la
                 // lista de canales a los que hacer un unsubscribe.
                 Ok(s) => channels.push(s),
 
@@ -368,5 +357,4 @@ impl Unsubscribe {
 
         frame
     }
-
 }

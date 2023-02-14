@@ -32,7 +32,7 @@ impl Frame {
     /// Retorna `Frame` con la variante `Array` con un `vector<Frame>` vacio.
     /// La unica forma de crear un 'Frame' es creando una variante de tipo 'Array`
     /// la cual contiene un 'Vector<Frame>` vacio. El resto de metodos nos
-    /// permitiran incorporar al vector nuevas instancios de 'Frame::Bulk' 
+    /// permitiran incorporar al vector nuevas instancios de 'Frame::Bulk'
     /// y 'Frame::Integer(bytes: Bytes)'.
     pub(crate) fn array() -> Frame {
         Frame::Array(vec![])
@@ -106,7 +106,7 @@ impl Frame {
             actual => {
                 // Tipo de frame no soportado
                 Err(format!("protocol error; invalid frame type byte `{}`", actual).into())
-            }, 
+            }
         }
     }
 
@@ -190,13 +190,13 @@ impl Frame {
                 Ok(Frame::Array(out))
             }
             _ => {
-                // El tipo de frame no esta soportado y el ejemplo utiliza 
+                // El tipo de frame no esta soportado y el ejemplo utiliza
                 // el macro `std::unimplemented` para generar un "panic" tipo de rust.
                 // En realidad creo que no es correcto porque un problema de trama en una
                 // conexion TCP desencadena la salida del programa.
                 // Deberia simplemente afectar a la conexion en curso...
                 unimplemented!()
-            },
+            }
         }
     }
 
@@ -251,7 +251,7 @@ fn peek_u8(src: &mut Cursor<&[u8]>) -> Result<u8, FrameError> {
         // Si no hay mas bytes para consumir se retorna un error.
         return Err(FrameError::Incomplete);
     }
-    // Inicialmente se obtiene un slice de los bytes entra la actual posicion y el final 
+    // Inicialmente se obtiene un slice de los bytes entra la actual posicion y el final
     // del buffer.
     // Finalmente se retorna el byte que hay en la posicion 0 del slice
     // La posicion NO AVANZA!
@@ -305,7 +305,7 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], FrameError> {
         if inner[i] == b'\r' && inner[i + 1] == b'\n' {
             // Hemos encontrado una linea, se actualiza la posicion despues de \n
             src.set_position((i + 2) as u64);
-            
+
             // Se retorna la linea
             return Ok(&src.get_ref()[start..i]);
         }
@@ -314,7 +314,7 @@ fn get_line<'a>(src: &mut Cursor<&'a [u8]>) -> Result<&'a [u8], FrameError> {
     Err(FrameError::Incomplete)
 }
 
-// Se implementa core::convert::From 
+// Se implementa core::convert::From
 // para conversion String -> mini_redis::frame::FrameError
 impl From<String> for FrameError {
     fn from(src: String) -> FrameError {
@@ -322,8 +322,8 @@ impl From<String> for FrameError {
     }
 }
 
-// Utiliza la implementacion automatica de core::convert::Into 
-// al implementar core::convert::From 
+// Utiliza la implementacion automatica de core::convert::Into
+// al implementar core::convert::From
 // para conversion String -> mini_redis::frame::FrameError
 impl From<&str> for FrameError {
     fn from(src: &str) -> FrameError {
@@ -331,8 +331,8 @@ impl From<&str> for FrameError {
     }
 }
 
-// Utiliza la implementacion automatica de core::convert::Into 
-// al implementar core::convert::From 
+// Utiliza la implementacion automatica de core::convert::Into
+// al implementar core::convert::From
 // para conversion String -> mini_redis::frame::FrameError
 impl From<FromUtf8Error> for FrameError {
     fn from(_src: FromUtf8Error) -> FrameError {
@@ -340,8 +340,8 @@ impl From<FromUtf8Error> for FrameError {
     }
 }
 
-// Utiliza la implementacion automatica de core::convert::Into 
-// al implementar core::convert::From 
+// Utiliza la implementacion automatica de core::convert::Into
+// al implementar core::convert::From
 // para conversion String -> mini_redis::frame::FrameError
 impl From<TryFromIntError> for FrameError {
     fn from(_src: TryFromIntError) -> FrameError {

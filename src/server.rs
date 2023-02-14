@@ -18,7 +18,6 @@ use tracing::{debug, error, info, instrument};
 /// por TCP y de la iniciar el proceso de para cada conexion.
 #[derive(Debug)]
 struct Listener {
-
     /// Base de datos compartida.
     /// Contiene tanto el almacen key/value asi como los canales de difucion
     /// para el pub/sub.
@@ -28,12 +27,12 @@ struct Listener {
     listener: TcpListener,
 
     /// Limita el numero maximo de conexiones.
-    /// 
-    /// Un `Semaphore' es utilizado para limitar el numero maximo 
+    ///
+    /// Un `Semaphore' es utilizado para limitar el numero maximo
     /// de conexiones. Antes de intentar una conexion, un permiso tiene
     /// que ser adquirido por el semaforo. Si no hay un permiso disponible,
     /// el listener esperara por uno.
-    /// 
+    ///
     /// Cuando los handlers completan el procesado de una conexion, el permiso
     /// es retornado al semaforo.
     limit_connections: Arc<Semaphore>,
@@ -43,10 +42,10 @@ struct Listener {
 
     /// Usado como parte del proceso de parada ordenada para esperar que las
     /// conexiones de los clientes completen el procesamiento.
-    /// 
+    ///
     /// Los canales de Tokio son cerrados cuando todos los `Sender' salen
     /// fuera del scope. Cuando el canal es cerrado, el receptor recibe `None`.
-    /// 
+    ///
     /// This is leveraged to detect all connection handlers completing. When a
     /// connection handler is initialized, it is assigned a clone of
     /// `shutdown_complete_tx`. When the listener shuts down, it drops the
@@ -91,12 +90,12 @@ const MAX_CONNECTIONS: usize = 250;
 
 /// Ejecuta el servidor mini-redis.
 ///
-/// Acepta conexiones desde el listener proporcionado. Para cada conexion 
+/// Acepta conexiones desde el listener proporcionado. Para cada conexion
 /// entrante se iniciara una tarea.
-/// 
+///
 /// El servidor se ejecutara hasta que el future `shutdown` se complete.
-/// 
-/// La senyal `tokio::signal::ctrl_c()` puede ser utilizada para iniciar la 
+///
+/// La senyal `tokio::signal::ctrl_c()` puede ser utilizada para iniciar la
 /// parada ordenada.
 pub async fn run(listener: TcpListener, shutdown: impl Future) {
     // When the provided `shutdown` future completes, we must send a shutdown

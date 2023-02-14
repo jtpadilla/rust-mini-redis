@@ -12,13 +12,10 @@ impl From<i32> for Number {
 }
 
 fn main() {
-
     let num = Number::from(30);
     println!("My number is {:?}", num);
 
     let int = 5;
     let num: Number = int.into();
     println!("My number is {:?}", num);
-
 }
-
