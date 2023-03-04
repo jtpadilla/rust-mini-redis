@@ -25,7 +25,7 @@ pub struct DbDropGuard {
 /// En primera instancia contiene un Arc 'Atomically Reference Counted' para
 /// poder compartir con el resto de threads estos datos.
 ///
-/// Cuando un 'Db' es creado la lanza tambien una tarea. Esta tarea es
+/// Cuando un 'Db' es creado se lanza tambien una tarea. Esta tarea es
 /// utilizada para gestionar la expiracion de los valores. La tarea funcionara
 /// hasta que todas las instancias de 'Db' son borradas, momento en el que
 /// terminara.
@@ -51,7 +51,6 @@ struct Shared {
     /// (uso intensivo de la CPU o realiza operaciones de bloqueo), entonces toda
     /// la operación, incluida la espera del mutex, se considera una operación
     /// de "bloqueo" y `tokio::task::spawn_blocking` debería ser usado.
-    ///
     state: Mutex<State>,
 
     /// Notifica el vencimiento de la entrada de manejo de tareas en segundo plano.
@@ -130,22 +129,36 @@ impl Db {
     /// crea la tarea que gestiona las expiraciones proporcionandole el primero
     /// clon de la base de datos.
     pub(crate) fn new() -> Db {
-        let shared = Arc::new(Shared {
-            state: Mutex::new(State {
-                entries: HashMap::new(),
-                pub_sub: HashMap::new(),
-                expirations: BTreeMap::new(),
-                next_id: 0,
-                shutdown: false,
-            }),
-            background_task: Notify::new(),
-        });
 
-        // Inicial la tarea.
-        tokio::spawn(purge_expired_tasks(shared.clone()));
+        // Se crea el objeto que contiene el estado
+        let state = State {
+            entries: HashMap::new(),
+            pub_sub: HashMap::new(),
+            expirations: BTreeMap::new(),
+            next_id: 0,
+            shutdown: false,
+        };
+
+        // Para acceder al estado hat que conseguir el acceso exclusivo
+        let mutex = Mutex::new(state);
+
+        // 'shared' ademas de contener el estado (protegido) contiene
+        // un mecanismo para recibir notificaciones.
+        let shared = Shared {
+            state: mutex,
+            background_task: Notify::new(),
+        };
+
+        // Se envuelve con un Arc para poder compartiro entre varios threads
+        let arc_shared = Arc::new(shared);
+
+        // Se inicia la tarea que purga las entradas expiradas a la cual
+        // se le proporciona un clone del Arc
+        tokio::spawn(purge_expired_tasks(arc_shared.clone()));
 
         // Se instancia un 'Db'
-        Db { shared }
+        Db { shared: arc_shared }
+
     }
 
     /// Obtiene el valor asociado con una clave.

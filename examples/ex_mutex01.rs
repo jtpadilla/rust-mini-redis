@@ -14,7 +14,6 @@ fn main() {
 
     // Se crean los N threads
     for _ in 0..N {
-
         // Se crea una tupla y se desestructura (aunque es superfluo)!
         // Este ejemplo es de la doc oficial asi que sera una buena practica.
         //
@@ -39,5 +38,4 @@ fn main() {
     }
 
     rx.recv().unwrap();
-
 }
