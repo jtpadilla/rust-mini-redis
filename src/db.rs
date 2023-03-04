@@ -51,7 +51,7 @@ struct Shared {
     /// (uso intensivo de la CPU o realiza operaciones de bloqueo), entonces toda
     /// la operación, incluida la espera del mutex, se considera una operación
     /// de "bloqueo" y `tokio::task::spawn_blocking` debería ser usado.
-    state: Mutex<State>,
+    state_mutex: Mutex<State>,
 
     /// Notifica el vencimiento de la entrada de manejo de tareas en segundo plano.
     /// La tarea en segundo plano espera a que se notifique esto, luego verifica
@@ -139,13 +139,13 @@ impl Db {
             shutdown: false,
         };
 
-        // Para acceder al estado hat que conseguir el acceso exclusivo
+        // Para acceder al estado hay que conseguir el acceso exclusivo
         let mutex = Mutex::new(state);
 
         // 'shared' ademas de contener el estado (protegido) contiene
         // un mecanismo para recibir notificaciones.
         let shared = Shared {
-            state: mutex,
+            state_mutex: mutex,
             background_task: Notify::new(),
         };
 
@@ -168,7 +168,7 @@ impl Db {
     /// le asigno un valor a la clave o a que el valor expiro.
     pub(crate) fn get(&self, key: &str) -> Option<Bytes> {
         // Se adquire el bloqueo
-        let state = self.shared.state.lock().unwrap();
+        let state = self.shared.state_mutex.lock().unwrap();
 
         // Se lee la entrada y clona el valor.
         //
@@ -185,7 +185,7 @@ impl Db {
     pub(crate) fn set(&self, key: String, value: Bytes, expire: Option<Duration>) {
         let notify = {
             // Se adquire el bloqueo
-            let mut state = self.shared.state.lock().unwrap();
+            let mut state = self.shared.state_mutex.lock().unwrap();
 
             // El Id almacenado en el estado es el que se utilizara para esta operacion.
             let id = state.next_id;
@@ -269,7 +269,7 @@ impl Db {
         use std::collections::hash_map::Entry;
 
         // Se adquiere el bloqueo
-        let mut state = self.shared.state.lock().unwrap();
+        let mut state = self.shared.state_mutex.lock().unwrap();
 
         // Si no hay una entrada para el canal requerido, entonces se crea un
         // nuevo canal de difusion y se asocia con el canal.
@@ -308,7 +308,7 @@ impl Db {
     /// que hay en el momento del envio (no quiered decir que todos lo reciban)
     pub fn publish(&self, key: &str, value: Bytes) -> usize {
         // Se adquiere el bloqueo
-        let state = self.shared.state.lock().unwrap();
+        let state = self.shared.state_mutex.lock().unwrap();
 
         // Se buscan el 'tokio::sync::broadcast::Sender' para el canal.
         state
@@ -328,7 +328,7 @@ impl Db {
     fn shutdown_purge_task(&self) {
         {
             // Se adquiere el bloqueo
-            let mut state = self.shared.state.lock().unwrap();
+            let mut state = self.shared.state_mutex.lock().unwrap();
 
             // Se marca `State::shutdown` a `true`.
             state.shutdown = true;
@@ -350,7 +350,7 @@ impl Shared {
     /// que sera la siguiente expiracion.
     fn purge_expired_keys(&self) -> Option<Instant> {
         // Se adquiere el bloqueo
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state_mutex.lock().unwrap();
 
         if state.shutdown {
             // la base de datos se esta deteniendo.
@@ -395,7 +395,7 @@ impl Shared {
     ///
     /// De momento no hay ningun mecanismo que vacie el estado.
     fn is_shutdown(&self) -> bool {
-        self.state.lock().unwrap().shutdown
+        self.state_mutex.lock().unwrap().shutdown
     }
 }
 
