@@ -218,9 +218,9 @@ impl Db {
                 state.expirations.insert((when, id), key.clone());
 
                 // Resultado
-                (notify, Option::Some(when))
+                (notify, Some(when))
             } else {
-                (false, Option::None)
+                (false, None)
             };
 
             // Se asigna la clave el nuevo valor en el HashMap principal.
